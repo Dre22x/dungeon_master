@@ -3,14 +3,7 @@ from tools.monster_tool import MonsterTool
 
 
 def main():
-    monster_tool = MonsterTool()
-    agent = LlmAgent(
-        name="Monster Hunter",
-        tools=[monster_tool],
-        verbose=True
-    )
-    agent.run("What is the size of a goblin?")
-
+    print("Hello, world!")
 
 
 if __name__ == "__main__":
