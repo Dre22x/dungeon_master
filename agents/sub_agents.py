@@ -1,20 +1,10 @@
 
 from google.adk.agents import LlmAgent
-from tools.monster_tool import fetch_monster_data, get_all_monsters
-from tools.spells_tool import fetch_spell_data, get_all_spells
-from tools.races_tool import fetch_race_data, get_all_races
-from tools.classes_tool import fetch_class_data, get_all_classes
+from tools.tools import *
 from tools.misc_tools import roll_dice
-
-# from tools.items_tool import get_item_description
-# from tools.dice_tool import roll_dice
-# from tools.npcs_tool import get_npc_profile, get_npc_memory, update_npc_memory
-# from tools.location_tool import get_location_details, get_time_of_day, get_current_weather
-# from tools.weather_tool import get_current_weather
 
 # Globals
 MODEL_NAME = "gemini-2.0-flash"
-
 
 # --- Create Sub Agents ---
 narrative_agent = LlmAgent(
@@ -71,13 +61,13 @@ rules_lawyer_agent = LlmAgent(
     -   If asked a general rule question, provide the official ruling.
 
     Your purpose is to provide data and judgments, not a story. Stick to the facts.""",
-    tools=[fetch_monster_data, 
+    tools=[get_monster_stats, 
            get_all_monsters, 
-           fetch_spell_data, 
+           get_spell_description, 
            get_all_spells, 
-           fetch_race_data, 
+           get_race_info, 
            get_all_races, 
-           fetch_class_data, 
+           get_class_info, 
            get_all_classes, 
            roll_dice]
 )
@@ -139,10 +129,24 @@ character_creation_agent = LlmAgent(
     -   **Use Your Tools:** Do not invent races, classes, or rules. You must rely on the information provided by your tools.
     -   **Final Output:** Your final response in the conversation MUST be the output from the `finalize_character` tool.
     """,
-    tools=[get_all_races,
-          get_all_classes, 
-          fetch_class_data, 
-          fetch_race_data, 
+    tools=[get_spell_description, 
+           get_all_spells, 
+           get_race_info, 
+           get_all_races, 
+           get_class_info, 
+           get_all_classes,
+           get_background_info,
+           get_all_backgrounds,
+           get_equipment_details,
+           get_all_equipments,
+           get_ability_score_details,
+           get_all_ability_scores,
+           get_skill_details,
+           get_all_skills,
+           get_all_languages,
+           get_all_proficiencies,
+           get_proficiency_details,
+
           get_starting_equipment, 
           assign_ability_scores, 
           get_backgrounds,
@@ -152,6 +156,5 @@ character_creation_agent = LlmAgent(
           get_proficiency,
           get_features_for_class,
           get_feature,
-
           ]
 )

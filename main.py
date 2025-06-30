@@ -1,5 +1,5 @@
 from google.adk.agents import LlmAgent
-from tools.monster_tool import MonsterTool
+from tools.monsters import MonsterTool
 
 
 def main():

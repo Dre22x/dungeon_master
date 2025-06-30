@@ -1,68 +1,33 @@
-import requests
-import json
-import argparse
 import textwrap
+from tools import _get_item_details, _fetch_index
 
-# The base URL for the 5e-bits SRD API
-API_BASE_URL = "https://www.dnd5eapi.co/api/2014/"
+# --- Race Tools ---
+def get_race_details(race_name: str) -> dict:
+    """Tool to get details for a specific character race."""
+    return _get_item_details("races", race_name)
 
-# Main Tool Function
-def fetch_race_data(race_name: str) -> dict:
-    """
-    Fetches detailed data for a specific race using its name.
 
-    Args:
-        race_name: The name of the race.
+# --- Race resource lists ---
+def get_subraces_available_for_race(race_name: str) -> list:
+    """Tool to get subraces available for a specific race."""
+    return _fetch_index(f"races/{race_name}/subraces")['results']
 
-    Returns:
-        A dictionary containing the race's data, or None on error.
-    """
-    formatted_name = format_race_name_for_api(race_name)
-    full_url = f"{API_BASE_URL}races/{formatted_name}"
-    print(f"--> Fetching details from: {full_url}\n")
-    try:
-        response = requests.get(full_url)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as http_err:
-        print(f"HTTP error occurred: {http_err}")
-    except requests.exceptions.RequestException as req_err:
-        print(f"A network error occurred: {req_err}")
-    return None
+def get_proficiencies_available_for_race(race_name: str) -> list:
+    """Tool to get proficiencies available for a specific race."""
+    return _fetch_index(f"races/{race_name}/proficiencies")['results']
 
-def format_race_name_for_api(name: str) -> str:
-    """
-    Formats the user-provided race name into the format required by the API.
-    Example: "High Elf" -> "high-elf"
-    
-    Args:
-        name: The raw name of the race.
+def get_traits_available_for_race(race_name: str) -> list:
+    """Tool to get traits available for a specific race."""
+    return _fetch_index(f"races/{race_name}/traits")['results']
 
-    Returns:
-        The formatted name, ready for the API URL.
-    """
-    return name.lower().replace(" ", "-")
 
+# --- Race get_all tools ---
 def get_all_races() -> list:
-    """
-    Fetches all available races from the SRD API.
+    """Tool to get all races."""
+    return _fetch_index("races")['results']
 
-    Returns:
-        A list of dictionaries, where each dictionary represents a race 
-        with its name and a URL to its data. Returns None on error.
-    """
-    url = f"{API_BASE_URL}races"
-    print("--> Fetching race index from the SRD...")
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error: A network error occurred while fetching the race index: {e}")
-    except json.JSONDecodeError:
-        print("Error: Failed to decode the race index. The API might be down.")
-    return None
 
+# --- Display Race Info ---
 def display_race_info(data: dict):
     """
     Displays the fetched race data in a clean, readable format.
@@ -173,20 +138,3 @@ def display_race_info(data: dict):
         print("-" * 60)
 
     print("="*60)
-
-def main():
-    """
-    Main function to run the command-line tool for race lookup.
-    """
-    parser = argparse.ArgumentParser(description="Search for and display D&D 5e race info from the SRD API.")
-    parser.add_argument("race_name", type=str, help="The name of the race to look up (e.g., 'elf', 'dwarf').")
-    
-    args = parser.parse_args()
-    
-    race_data = fetch_race_data(args.race_name)
-    
-    if race_data:
-        display_race_info(race_data)
-
-if __name__ == "__main__":
-    main() 

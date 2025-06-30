@@ -1,68 +1,63 @@
-import requests
-import json
-import argparse
 import textwrap
+from tools import _get_item_details, _fetch_index
 
-# The base URL for the 5e-bits SRD API
-API_BASE_URL = "https://www.dnd5eapi.co/api/2014/"
+# --- Class Tools ---
+def get_class_details(class_name: str) -> dict:
+    """Tool to get details for a specific character class."""
+    return _get_item_details("classes", class_name)
 
-# Main Tool Function
-def fetch_class_data(class_name: str) -> dict:
-    """
-    Fetches detailed data for a specific class using its name.
+def get_spellcasting_info(class_name: str) -> dict:
+    """Tool to get spellcasting info for a specific character class."""
+    return _get_item_details("spellcasting", class_name)
 
-    Args:
-        class_name: The name of the class.
+def get_multiclassing_info(class_name: str) -> dict:
+    """Tool to get multiclassing info for a specific character class."""
+    return _get_item_details("multiclassing", class_name)
 
-    Returns:
-        A dictionary containing the class's data, or None on error.
-    """
-    formatted_name = format_class_name_for_api(class_name)
-    full_url = f"{API_BASE_URL}classes/{formatted_name}"
-    print(f"--> Fetching details from: {full_url}\n")
-    try:
-        response = requests.get(full_url)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as http_err:
-        print(f"HTTP error occurred: {http_err}")
-    except requests.exceptions.RequestException as req_err:
-        print(f"A network error occurred: {req_err}")
-    return None
 
-def format_class_name_for_api(name: str) -> str:
-    """
-    Formats the user-provided class name into the format required by the API.
-    Example: "Fighter" -> "fighter"
-    
-    Args:
-        name: The raw name of the class.
+# --- Class resource lists ---
+def get_subclasses_available_for_class(class_name: str) -> list:
+    """Tool to get subclasses available for a specific character class."""
+    return _fetch_index(f"classes/{class_name}/subclasses")['results']
 
-    Returns:
-        The formatted name, ready for the API URL.
-    """
-    return name.lower().replace(" ", "-")
+def get_spells_available_for_class(class_name: str) -> list:
+    """Tool to get spells available for a specific character class."""
+    return _fetch_index(f"classes/{class_name}/spells")['results']
 
+def get_features_available_for_class(class_name: str) -> list:
+    """Tool to get features available for a specific character class."""
+    return _fetch_index(f"classes/{class_name}/features")['results']
+
+def get_proficiencies_available_for_class(class_name: str) -> list:
+    """Tool to get proficiencies available for a specific character class."""
+    return _fetch_index(f"classes/{class_name}/proficiencies")['results']
+
+
+# --- Class levels ---
+def get_all_level_resources_for_class(class_name: str) -> list:
+    """Tool to get all level resources for a specific character class."""
+    return _fetch_index(f"classes/{class_name}/levels")
+
+def get_level_resources_for_class_at_level(class_name: str, level: str) -> list:
+    """Tool to get level resources for a specific character class at a specific level."""
+    return _fetch_index(f"classes/{class_name}/levels/{level}")
+
+def get_features_for_class_at_level(class_name: str, level: str) -> list:
+    """Tool to get features for a specific character class at a specific level."""
+    return _fetch_index(f"classes/{class_name}/levels/{level}/features")['results']
+
+def get_spells_for_class_at_level(class_name: str, level: str) -> list:
+    """Tool to get spells for a specific character class at a specific level."""
+    return _fetch_index(f"classes/{class_name}/levels/{level}/spells")['results']
+
+
+# --- Class get_all tools ---
 def get_all_classes() -> list:
-    """
-    Fetches all available classes from the SRD API.
+  """Tool to get all classes."""
+  return _fetch_index("classes")
 
-    Returns:
-        A list of dictionaries, where each dictionary represents a class 
-        with its name and a URL to its data. Returns None on error.
-    """
-    url = f"{API_BASE_URL}classes"
-    print("--> Fetching class index from the SRD...")
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error: A network error occurred while fetching the class index: {e}")
-    except json.JSONDecodeError:
-        print("Error: Failed to decode the class index. The API might be down.")
-    return None
 
+# --- Display Class Info ---
 def display_class_info(data: dict):
     """
     Displays the fetched class data in a clean, readable format.
@@ -136,20 +131,3 @@ def display_class_info(data: dict):
         print("-" * 60)
 
     print("="*60)
-
-def main():
-    """
-    Main function to run the command-line tool for class lookup.
-    """
-    parser = argparse.ArgumentParser(description="Search for and display D&D 5e class info from the SRD API.")
-    parser.add_argument("class_name", type=str, help="The name of the class to look up (e.g., 'fighter', 'wizard').")
-    
-    args = parser.parse_args()
-    
-    class_data = fetch_class_data(args.class_name)
-    
-    if class_data:
-        display_class_info(class_data)
-
-if __name__ == "__main__":
-    main() 
