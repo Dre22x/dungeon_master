@@ -27,6 +27,7 @@ root_agent = LlmAgent(
     -   If the input is `{"intent": "talk", "actor": "player1", "target": "blacksmith_gloria"}`, you must first change the state to 'dialogue' and then command the NPC Agent: "Initiate dialogue for Player1 with NPC: blacksmith_gloria."
 
     You are the central hub. Be logical, efficient, and precise in your commands.""",
-  sub_agents=[narrative_agent, npc_agent, rules_lawyer_agent]
+  sub_agents=[narrative_agent, npc_agent, rules_lawyer_agent],
+  tools=[change_game_state, start_combat, end_combat, get_player_location]
 )
 

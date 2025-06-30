@@ -1,5 +1,16 @@
 
 from google.adk.agents import LlmAgent
+from tools.monster_tool import fetch_monster_data, get_all_monsters
+from tools.spells_tool import fetch_spell_data, get_all_spells
+from tools.races_tool import fetch_race_data, get_all_races
+from tools.classes_tool import fetch_class_data, get_all_classes
+from tools.misc_tools import roll_dice
+
+# from tools.items_tool import get_item_description
+# from tools.dice_tool import roll_dice
+# from tools.npcs_tool import get_npc_profile, get_npc_memory, update_npc_memory
+# from tools.location_tool import get_location_details, get_time_of_day, get_current_weather
+# from tools.weather_tool import get_current_weather
 
 # Globals
 MODEL_NAME = "gemini-2.0-flash"
@@ -60,7 +71,15 @@ rules_lawyer_agent = LlmAgent(
     -   If asked a general rule question, provide the official ruling.
 
     Your purpose is to provide data and judgments, not a story. Stick to the facts.""",
-    tools=[get_monster_stats, get_spell_description, get_item_description, roll_dice]
+    tools=[fetch_monster_data, 
+           get_all_monsters, 
+           fetch_spell_data, 
+           get_all_spells, 
+           fetch_race_data, 
+           get_all_races, 
+           fetch_class_data, 
+           get_all_classes, 
+           roll_dice]
 )
 
 player_interface_agent = LlmAgent(
@@ -96,4 +115,43 @@ player_interface_agent = LlmAgent(
     Your analysis must be sharp and accurate. The entire game system depends on the quality and consistency of your JSON output. Do not add any extra text or explanation. Just the JSON.
     """,
     tools=[get_nearby_npcs, get_current_combat_targets, get_player_inventory, get_known_spells]
+)
+
+
+character_creation_agent = LlmAgent(
+  name="character_creation_agent",
+  model=MODEL_NAME,
+  description="You are a friendly and knowledgeable Character Creation Assistant for Dungeons & Dragons 5th Edition. Your goal is to help a new player create their very first character. You are patient, encouraging, and an expert at explaining complex game concepts in a simple and engaging way. "
+  instruction="""
+    Your workflow is a guided conversation. You must lead the user through the following steps in order, one at a time:
+    1.  **Concept:** Start by asking the player what kind of hero they imagine. Do they want to be a mighty warrior, a clever wizard, a sneaky rogue? Use their answer to guide your suggestions.
+    2.  **Race:** Based on their concept, present them with a few suitable race options fetched from your tools. Briefly explain the unique traits of each (e.g., "Elves are graceful and live a long time, while Dwarves are tough and natural miners.").
+    3.  **Class:** Once a race is chosen, present them with class options that fit their concept. Explain the core function of each class (e.g., "Fighters are masters of weapons, while Clerics wield divine magic to heal and protect.").
+    4.  **Ability Scores:** Explain the six ability scores (Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma). Use the "Standard Array" (15, 14, 13, 12, 10, 8) and help the player assign these numbers to the scores that best fit their chosen class. For example, "For a Wizard, Intelligence is the most important score. Let's put your 15 there."
+    5.  **Background:** Offer a few background options. Explain that a background gives their character a story, some skills, and extra equipment.
+    6.  **Equipment:** Based on their class, tell them what starting equipment they get.
+    7.  **Final Summary:** Once all steps are complete, confirm with the user. Then, use your `finalize_character` tool to generate and present a clean, organized summary of the character they've just built.
+
+    **Your Guiding Principles:**
+    -   **One Step at a Time:** Do not overwhelm the user. Complete one step fully before moving to the next.
+    -   **Be Conversational:** Do not just list options. Ask questions and provide context.
+    -   **Maintain State:** You must remember the choices the user has made (e.g., their chosen race and class) to inform later suggestions.
+    -   **Use Your Tools:** Do not invent races, classes, or rules. You must rely on the information provided by your tools.
+    -   **Final Output:** Your final response in the conversation MUST be the output from the `finalize_character` tool.
+    """,
+    tools=[get_all_races,
+          get_all_classes, 
+          fetch_class_data, 
+          fetch_race_data, 
+          get_starting_equipment, 
+          assign_ability_scores, 
+          get_backgrounds,
+          finalize_character,
+
+          get_proficiencies_for_class,
+          get_proficiency,
+          get_features_for_class,
+          get_feature,
+
+          ]
 )
