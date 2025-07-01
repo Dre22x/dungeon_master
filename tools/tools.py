@@ -22,14 +22,27 @@ def _fetch_index(category: str) -> list:
         print(f"FATAL ERROR: Could not fetch index for '{category}': {e}")
         return []
 
-def _search_index(query: str, index: list) -> dict | None:
-    """Helper function to search a given index for a matching name."""
+def _search_index(query: str, index: list | dict) -> dict | None:
+    """Helper function to search a given index for a matching name or index."""
     query_lower = query.lower()
-    for item in index['results']:
-        if query_lower == item.get('name', '').lower(): # Exact match first
+    # Handle both dict with 'results' key and direct list
+    if isinstance(index, dict) and 'results' in index:
+        items = index['results']
+    elif isinstance(index, list):
+        items = index
+    else:
+        return None
+    # Exact match on 'index' field
+    for item in items:
+        if query_lower == str(item.get('index', '')).lower():
             return item
-    for item in index['results']:
-        if query_lower in item.get('name', '').lower(): # Partial match second
+    # Exact match on 'name' field
+    for item in items:
+        if query_lower == str(item.get('name', '')).lower():
+            return item
+    # Partial match on 'name' field
+    for item in items:
+        if query_lower in str(item.get('name', '')).lower():
             return item
     return None
 

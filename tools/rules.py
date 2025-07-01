@@ -13,11 +13,13 @@ def get_rules_by_section(section_name: str) -> dict:
 
 def get_all_rules() -> list:
     """Tool to get all rules."""
-    return _fetch_index("rules")['results']
+    result = _fetch_index("rules")
+    return result.get('results', []) if isinstance(result, dict) else result
 
 def get_all_rules_sections() -> list:
     """Tool to get all rules sections."""
-    return _fetch_index("rules")['results']
+    result = _fetch_index("rules")
+    return result.get('results', []) if isinstance(result, dict) else result
 
 if __name__ == "__main__":
     print(get_rules_by_section("spellcasting"))

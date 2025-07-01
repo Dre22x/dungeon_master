@@ -16,7 +16,7 @@ from tools.weapons import *
 from tools.misc_tools import roll_dice
 
 # Globals
-MODEL_NAME = "gemini-live-2.5-flash-preview"
+MODEL_NAME = "gemini-2.0-flash"
 
 # --- Create Sub Agents ---
 narrative_agent = LlmAgent(
@@ -148,7 +148,7 @@ character_creation_agent = LlmAgent(
            get_all_races, 
            get_class_details, 
            get_all_classes,
-          #  get_background_details,
+           get_background_details,
            get_all_backgrounds,
            get_equipment_details,
            get_all_equipment,
@@ -179,9 +179,6 @@ character_creation_agent = LlmAgent(
            get_magic_item_details,
            get_all_magic_items,
            get_all_magic_schools,
-
-
-          #  assign_ability_scores, 
            finalize_character,
           ]
 )

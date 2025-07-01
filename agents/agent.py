@@ -6,7 +6,7 @@ from agents.sub_agents import narrative_agent, npc_agent, rules_lawyer_agent, ch
 import os
 
 # Globals
-MODEL_NAME = "gemini-live-2.5-flash-preview"
+MODEL_NAME = "gemini-2.0-flash"
 os.environ["GOOGLE_API_KEY"] = "AIzaSyAMEgPT8FjJ2ToGvTsn2o0GoodN_wV4Qy8"
 
 # --- Create Root Agent ---

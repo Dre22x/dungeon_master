@@ -9,8 +9,10 @@ def get_magic_item_details(magic_item_name: str) -> dict:
 # --- Magic Item get_all tools ---
 def get_all_magic_items() -> list[dict]:
     """Tool to get all magic items."""
-    return _fetch_index("magic-items")['results']
+    result = _fetch_index("magic-items")
+    return result.get('results', []) if isinstance(result, dict) else result
 
 def get_all_magic_schools() -> list[dict]:
     """Tool to get all magic schools."""
-    return _fetch_index("magic-schools")['results']
+    result = _fetch_index("magic-schools")
+    return result.get('results', []) if isinstance(result, dict) else result
