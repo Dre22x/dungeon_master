@@ -86,6 +86,6 @@ def get_starting_equipment(class_name: str) -> dict:
     return _get_item_details("starting-equipment", class_name)
 
 
-def get_all_equipments() -> list:
+def get_all_equipments() -> list[dict]:
   """Tool to get all equipment."""
   return _fetch_index("equipment")

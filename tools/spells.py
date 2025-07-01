@@ -20,7 +20,7 @@ def get_spells_by_level_and_school(level: str, school: str) -> list:
 
 
 # --- Spell get_all tools ---
-def get_all_spells() -> list:
+def get_all_spells() -> list[dict]:
     """Tool to get all spells."""
     return _fetch_index("spells")['results']
 

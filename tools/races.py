@@ -22,7 +22,7 @@ def get_traits_available_for_race(race_name: str) -> list:
 
 
 # --- Race get_all tools ---
-def get_all_races() -> list:
+def get_all_races() -> list[dict]:
     """Tool to get all races."""
     return _fetch_index("races")['results']
 

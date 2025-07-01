@@ -7,6 +7,6 @@ def get_weapon_property_details(weapon_property_name: str) -> dict:
 
 
 # --- Weapon get_all tools ---
-def get_all_weapon_properties() -> list:
+def get_all_weapon_properties() -> list[dict]:
     """Tool to get all weapon properties."""
     return _fetch_index("weapon-properties")['results']

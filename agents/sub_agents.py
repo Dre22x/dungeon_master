@@ -1,10 +1,22 @@
 
 from google.adk.agents import LlmAgent
-from tools.tools import *
+from tools.character_data import *
+from tools.classes import *
+from tools.equipment import *
+from tools.game_mechanics import *
+from tools.magic_items import *
+from tools.monsters import *
+from tools.rules import *
+from tools.races import *
+from tools.subclasses import *
+from tools.spells import *
+from tools.subraces import *
+from tools.traits import *
+from tools.weapons import *
 from tools.misc_tools import roll_dice
 
 # Globals
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-live-2.5-flash-preview"
 
 # --- Create Sub Agents ---
 narrative_agent = LlmAgent(
@@ -24,7 +36,7 @@ narrative_agent = LlmAgent(
     -   Do not give the players choices or ask them what they do. Simply describe.
 
     Your output is pure narrative text, written in the second person ("You see...") or third person ("A shadow falls over the party...").""",
-  tools=[get_location_details, get_time_of_day, get_current_weather]
+  # tools=[get_location_details, get_time_of_day, get_current_weather]
 )
 
 npc_agent = LlmAgent(
@@ -42,7 +54,7 @@ npc_agent = LlmAgent(
     5.  You do not have access to game rules or monster stats. If a player asks you something your character wouldn't know, respond accordingly (e.g., "I'm just a blacksmith, I don't know anything about ancient dragons!").
 
     Your output is ONLY the dialogue and actions of the NPC you are currently playing.""",
-    tools=[get_npc_profile, get_npc_memory, update_npc_memory]
+    # tools=[get_npc_profile, get_npc_memory, update_npc_memory]
 )
 
 rules_lawyer_agent = LlmAgent(
@@ -61,15 +73,15 @@ rules_lawyer_agent = LlmAgent(
     -   If asked a general rule question, provide the official ruling.
 
     Your purpose is to provide data and judgments, not a story. Stick to the facts.""",
-    tools=[get_monster_stats, 
-           get_all_monsters, 
-           get_spell_description, 
-           get_all_spells, 
-           get_race_info, 
-           get_all_races, 
-           get_class_info, 
-           get_all_classes, 
-           roll_dice]
+    # tools=[get_monster_stats, 
+    #        get_all_monsters, 
+    #        get_spell_description, 
+    #        get_all_spells, 
+    #        get_race_info, 
+    #        get_all_races, 
+    #        get_class_info, 
+    #        get_all_classes, 
+    #        roll_dice]
 )
 
 player_interface_agent = LlmAgent(
@@ -104,16 +116,17 @@ player_interface_agent = LlmAgent(
 
     Your analysis must be sharp and accurate. The entire game system depends on the quality and consistency of your JSON output. Do not add any extra text or explanation. Just the JSON.
     """,
-    tools=[get_nearby_npcs, get_current_combat_targets, get_player_inventory, get_known_spells]
+    # tools=[get_nearby_npcs, get_current_combat_targets, get_player_inventory, get_known_spells]
 )
 
 
 character_creation_agent = LlmAgent(
   name="character_creation_agent",
   model=MODEL_NAME,
-  description="You are a friendly and knowledgeable Character Creation Assistant for Dungeons & Dragons 5th Edition. Your goal is to help a new player create their very first character. You are patient, encouraging, and an expert at explaining complex game concepts in a simple and engaging way. "
+  description="You are a friendly and knowledgeable Character Creation Assistant for Dungeons & Dragons 5th Edition. Your goal is to help a new player create their very first character. You are patient, encouraging, and an expert at explaining complex game concepts in a simple and engaging way. ",
   instruction="""
     Your workflow is a guided conversation. You must lead the user through the following steps in order, one at a time:
+    -   **Pre-processing:** Run all you 'get_all' tools to get all the data you need to familiarize yourself with the game and the different options available to the player in terms of races, classes, backgrounds, equipment, etc.
     1.  **Concept:** Start by asking the player what kind of hero they imagine. Do they want to be a mighty warrior, a clever wizard, a sneaky rogue? Use their answer to guide your suggestions.
     2.  **Race:** Based on their concept, present them with a few suitable race options fetched from your tools. Briefly explain the unique traits of each (e.g., "Elves are graceful and live a long time, while Dwarves are tough and natural miners.").
     3.  **Class:** Once a race is chosen, present them with class options that fit their concept. Explain the core function of each class (e.g., "Fighters are masters of weapons, while Clerics wield divine magic to heal and protect.").
@@ -129,32 +142,46 @@ character_creation_agent = LlmAgent(
     -   **Use Your Tools:** Do not invent races, classes, or rules. You must rely on the information provided by your tools.
     -   **Final Output:** Your final response in the conversation MUST be the output from the `finalize_character` tool.
     """,
-    tools=[get_spell_description, 
+    tools=[get_spell_details, 
            get_all_spells, 
-           get_race_info, 
+           get_race_details, 
            get_all_races, 
-           get_class_info, 
+           get_class_details, 
            get_all_classes,
-           get_background_info,
+          #  get_background_details,
            get_all_backgrounds,
            get_equipment_details,
-           get_all_equipments,
+           get_all_equipment,
+           get_all_equipment_categories,
+           get_equipment_by_category,
            get_ability_score_details,
            get_all_ability_scores,
-           get_skill_details,
+           get_alignment_details,
+           get_all_alignments,
+           get_skill_details, 
            get_all_skills,
+           get_language_details,
            get_all_languages,
            get_all_proficiencies,
            get_proficiency_details,
+           get_subclass_details,
+           get_all_subclasses,
+           get_subrace_details,
+           get_all_subraces,
+           get_trait_details,
+           get_all_traits,
+           get_weapon_property_details,
+           get_all_weapon_properties,
+           get_condition_details,
+           get_all_conditions,
+           get_damage_type_details,
+           get_all_damage_types,
+           get_magic_item_details,
+           get_all_magic_items,
+           get_all_magic_schools,
 
-          get_starting_equipment, 
-          assign_ability_scores, 
-          get_backgrounds,
-          finalize_character,
 
-          get_proficiencies_for_class,
-          get_proficiency,
-          get_features_for_class,
-          get_feature,
+          #  assign_ability_scores, 
+           finalize_character,
           ]
 )

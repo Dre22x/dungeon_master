@@ -11,10 +11,10 @@ def get_damage_type_details(damage_type_name: str) -> dict:
 
 
 # --- Game Mechanics get_all tools ---
-def get_all_conditions() -> list:
+def get_all_conditions() -> list[dict]:
     """Tool to get all conditions."""
     return _fetch_index("conditions")['results']
 
-def get_all_damage_types() -> list:
+def get_all_damage_types() -> list[dict]:
     """Tool to get all damage types."""
     return _fetch_index("damage-types")['results']

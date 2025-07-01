@@ -28,7 +28,7 @@ def get_features_of_spell_level_for_subclass(subclass_name: str, level: str) -> 
 
 
 # --- Class get_all tools ---
-def get_all_subclasses() -> list:
+def get_all_subclasses() -> list[dict]:
   """Tool to get all subclasses."""
   return _fetch_index("subclasses")
 

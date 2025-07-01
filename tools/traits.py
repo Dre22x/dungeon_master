@@ -7,6 +7,6 @@ def get_trait_details(trait_name: str) -> dict:
 
 
 # --- Trait get_all tools ---
-def get_all_traits() -> list:
+def get_all_traits() -> list[dict]:
     """Tool to get all traits."""
     return _fetch_index("traits")['results']

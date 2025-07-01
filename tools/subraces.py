@@ -17,6 +17,6 @@ def get_traits_available_for_subrace(subrace_name: str) -> list:
 
 
 # --- Subrace get_all tools ---
-def get_all_subraces() -> list:
+def get_all_subraces() -> list[dict]:
     """Tool to get all subraces."""
     return _fetch_index("subraces")['results']

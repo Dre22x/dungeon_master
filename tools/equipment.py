@@ -16,12 +16,12 @@ def get_equipment_details(equipment_name: str) -> dict:
 
 
 # --- Equipment get_all tools ---
-def get_all_equipment() -> list:
+def get_all_equipment() -> list[dict]:
     """Tool to get all equipment."""
     return _fetch_index("equipment")['results']
 
 
-def get_all_equipment_categories() -> list:
+def get_all_equipment_categories() -> list[dict]:
     """Tool to get all equipment categories."""
     return _fetch_index("equipment-categories")['results']
 

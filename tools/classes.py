@@ -52,7 +52,7 @@ def get_spells_for_class_at_level(class_name: str, level: str) -> list:
 
 
 # --- Class get_all tools ---
-def get_all_classes() -> list:
+def get_all_classes() -> list[dict]:
   """Tool to get all classes."""
   return _fetch_index("classes")
 
