@@ -57,6 +57,20 @@ npc_agent = LlmAgent(
     # tools=[get_npc_profile, get_npc_memory, update_npc_memory]
 )
 
+generate_npc_agent = LlmAgent(
+  name="generate_npc_agent",
+  model=MODEL_NAME,
+  description="You are an imaginative creator. Your sole purpose is to generate an NPC character profile for a Non-Player Character (NPC) in the game world. ",
+  instruction="""
+    When called upon, you will generate 
+
+    Your output is ONLY the character profile of the NPC you are currently playing. 
+    Save this profile in the game_state by calling the save_npc_profile tool. 
+    Then pass this profile along to the npc_agent to roleplay as the NPC using the call_npc_agent tool.
+    """,
+    # tools=[get_npc_profile, get_npc_memory, update_npc_memory]
+)
+
 rules_lawyer_agent = LlmAgent(
   name="rules_lawyer_agent",
   model=MODEL_NAME,
@@ -73,15 +87,55 @@ rules_lawyer_agent = LlmAgent(
     -   If asked a general rule question, provide the official ruling.
 
     Your purpose is to provide data and judgments, not a story. Stick to the facts.""",
-    # tools=[get_monster_stats, 
-    #        get_all_monsters, 
-    #        get_spell_description, 
-    #        get_all_spells, 
-    #        get_race_info, 
-    #        get_all_races, 
-    #        get_class_info, 
-    #        get_all_classes, 
-    #        roll_dice]
+    tools=[get_spell_details, 
+           get_all_spells, 
+           get_race_details, 
+           get_all_races, 
+           get_class_details, 
+           get_all_classes,
+           get_background_details,
+           get_all_backgrounds,
+           get_equipment_details,
+           get_all_equipment,
+           get_all_equipment_categories,
+           get_equipment_by_category,
+           get_ability_score_details,
+           get_all_ability_scores,
+           get_alignment_details,
+           get_all_alignments,
+           get_skill_details, 
+           get_all_skills,
+           get_language_details,
+           get_all_languages,
+           get_all_proficiencies,
+           get_proficiency_details,
+           get_subclass_details,
+           get_all_subclasses,
+           get_subrace_details,
+           get_all_subraces,
+           get_trait_details,
+           get_all_traits,
+           get_weapon_property_details,
+           get_all_weapon_properties,
+           get_condition_details,
+           get_all_conditions,
+           get_damage_type_details,
+           get_all_damage_types,
+           get_magic_item_details,
+           get_all_magic_items,
+           get_all_magic_schools,
+           get_rules_details,
+           get_rules_by_section,
+           get_all_rules_sections,
+           get_all_rules,
+           get_all_monsters,
+           get_monster_details,
+           get_monster_by_challenge_rating,
+           get_all_spells,
+           get_spell_details,
+           get_spells_by_level_and_school,
+           get_spells_by_school,
+          ]
 )
 
 player_interface_agent = LlmAgent(
