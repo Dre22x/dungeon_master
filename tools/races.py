@@ -6,7 +6,6 @@ def get_race_details(race_name: str) -> dict:
     """Tool to get details for a specific character race."""
     return _get_item_details("races", race_name)
 
-
 # --- Race resource lists ---
 def get_subraces_available_for_race(race_name: str) -> list:
     """Tool to get subraces available for a specific race."""

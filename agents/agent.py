@@ -2,7 +2,7 @@ from google.adk.agents import LlmAgent
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types # For creating message Content/Parts
-from agents.sub_agents import narrative_agent, npc_agent, rules_lawyer_agent, character_creation_agent
+from agents.sub_agents import narrative_agent, npc_agent, rules_lawyer_agent, character_creation_agent, generate_npc_agent
 import os
 
 # Globals
@@ -15,12 +15,14 @@ root_agent = LlmAgent(
   model=MODEL_NAME,
   description="You are the master orchestrator and Game Master for a Dungeons & Dragons campaign. Your primary function is to manage the flow of the game and delegate tasks to your specialist agents. You do not interact with the player directly. ",
   instruction="""Your workflow is as follows:
-    You have two possible inputs:
+    You have three possible inputs:
     1.  Receive a structured command from the Player Interface Agent.
     2.  Receive a freeform message from the Player.
+    3.  Receive a message from the Character Creation Agen to start the game.
 
     If the input is a structured command, you must follow the Main Workflow below.
     If the input is a freeform message, you must first analyze the message and determine if the player wants to create a character. If so, delegate to the Character Creation Agent.
+    If the input is a message from the Character Creation Agent, you must start a Dungeons and Dragons adventure with the new characters
 
     Main Workflow:
     1.  Receive a structured command from the Player Interface Agent.
@@ -36,7 +38,7 @@ root_agent = LlmAgent(
     -   If the input is `{"intent": "talk", "actor": "player1", "target": "blacksmith_gloria"}`, you must first change the state to 'dialogue' and then command the NPC Agent: "Initiate dialogue for Player1 with NPC: blacksmith_gloria."
 
     You are the central hub. Be logical, efficient, and precise in your commands.""",
-  sub_agents=[narrative_agent, npc_agent, rules_lawyer_agent, character_creation_agent],
+  sub_agents=[narrative_agent, npc_agent, rules_lawyer_agent, character_creation_agent, generate_npc_agent],
   # tools=[start_character_creation_session]
   # tools=[change_game_state, start_combat, end_combat, get_player_location]
 )

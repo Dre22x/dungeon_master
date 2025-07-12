@@ -36,7 +36,6 @@ narrative_agent = LlmAgent(
     -   Do not give the players choices or ask them what they do. Simply describe.
 
     Your output is pure narrative text, written in the second person ("You see...") or third person ("A shadow falls over the party...").""",
-  # tools=[get_location_details, get_time_of_day, get_current_weather]
 )
 
 npc_agent = LlmAgent(
@@ -54,7 +53,6 @@ npc_agent = LlmAgent(
     5.  You do not have access to game rules or monster stats. If a player asks you something your character wouldn't know, respond accordingly (e.g., "I'm just a blacksmith, I don't know anything about ancient dragons!").
 
     Your output is ONLY the dialogue and actions of the NPC you are currently playing.""",
-    # tools=[get_npc_profile, get_npc_memory, update_npc_memory]
 )
 
 generate_npc_agent = LlmAgent(
@@ -188,6 +186,7 @@ character_creation_agent = LlmAgent(
     5.  **Background:** Offer a few background options. Explain that a background gives their character a story, some skills, and extra equipment.
     6.  **Equipment:** Based on their class, tell them what starting equipment they get.
     7.  **Final Summary:** Once all steps are complete, confirm with the user. Then, use your `finalize_character` tool to generate and present a clean, organized summary of the character they've just built.
+    8.  **Hand off to the root_agent:** Once the character is finalized, hand off to the DM to start the game.
 
     **Your Guiding Principles:**
     -   **One Step at a Time:** Do not overwhelm the user. Complete one step fully before moving to the next.
@@ -195,7 +194,11 @@ character_creation_agent = LlmAgent(
     -   **Maintain State:** You must remember the choices the user has made (e.g., their chosen race and class) to inform later suggestions.
     -   **Use Your Tools:** Do not invent races, classes, or rules. You must rely on the information provided by your tools.
     -   **Final Output:** Your final response in the conversation MUST be the output from the `finalize_character` tool.
-    """,
+
+    **Note:**
+    -   If the player asks you to choose any aspect of the character creation, including the entire character profile, do so and make reasonable choices that go well together according to standard D&D character tropes.
+    -   If the player asks you to choose the entire character for them, do not ask them any questions. Just pick a race, class, ability scores, background, and equipment. Then use the `finalize_character` tool to generate the character sheet.
+        """,
     tools=[get_spell_details, 
            get_all_spells, 
            get_race_details, 

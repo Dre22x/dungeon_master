@@ -52,9 +52,6 @@ def get_all_alignments() -> list[dict]:
   """Tool to get all alignments."""
   return _fetch_index("alignments")
 
-
-
-
 # --- Character Creation Tools ---
 def finalize_character(
     name: str, 
@@ -126,6 +123,5 @@ def finalize_character(
     # Print to console
     final_sheet = "\n".join(sheet)
     print(final_sheet)
-    
-    # Return a confirmation message
+
     return f"Character sheet for {name} has been successfully generated and printed."
