@@ -18,11 +18,11 @@ root_agent = LlmAgent(
     You have three possible inputs:
     1.  Receive a structured command from the Player Interface Agent.
     2.  Receive a freeform message from the Player.
-    3.  Receive a message from the Character Creation Agen to start the game.
+    3.  Receive a message from the Character Creation Agent to start the game.
 
     If the input is a structured command, you must follow the Main Workflow below.
     If the input is a freeform message, you must first analyze the message and determine if the player wants to create a character. If so, delegate to the Character Creation Agent.
-    If the input is a message from the Character Creation Agent, you must start a Dungeons and Dragons adventure with the new characters
+    If the input is a message from the Character Creation Agent, you must start a Dungeons and Dragons adventure with the new characters.
 
     Main Workflow:
     1.  Receive a structured command from the Player Interface Agent.

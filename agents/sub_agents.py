@@ -14,6 +14,7 @@ from tools.subraces import *
 from tools.traits import *
 from tools.weapons import *
 from tools.misc_tools import roll_dice
+from firestore.db_utils import *
 
 # Globals
 MODEL_NAME = "gemini-2.0-flash"
@@ -53,20 +54,6 @@ npc_agent = LlmAgent(
     5.  You do not have access to game rules or monster stats. If a player asks you something your character wouldn't know, respond accordingly (e.g., "I'm just a blacksmith, I don't know anything about ancient dragons!").
 
     Your output is ONLY the dialogue and actions of the NPC you are currently playing.""",
-)
-
-generate_npc_agent = LlmAgent(
-  name="generate_npc_agent",
-  model=MODEL_NAME,
-  description="You are an imaginative creator. Your sole purpose is to generate an NPC character profile for a Non-Player Character (NPC) in the game world. ",
-  instruction="""
-    When called upon, you will generate 
-
-    Your output is ONLY the character profile of the NPC you are currently playing. 
-    Save this profile in the game_state by calling the save_npc_profile tool. 
-    Then pass this profile along to the npc_agent to roleplay as the NPC using the call_npc_agent tool.
-    """,
-    # tools=[get_npc_profile, get_npc_memory, update_npc_memory]
 )
 
 rules_lawyer_agent = LlmAgent(
