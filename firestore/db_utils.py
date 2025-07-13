@@ -318,26 +318,53 @@ def delete_character_from_campaign(campaign_id: str, character_name: str) -> str
 
 # --- NPC Management (Campaign-Specific) ---
 
-def save_npc_to_campaign(campaign_id: str, npc_data: dict) -> str:
+def save_npc_to_campaign(campaign_id: str, name: str, npc_type: str, 
+                         description: str, location: str, 
+                         role: str, notes: str) -> str:
     """
     Saves an NPC to a specific campaign's npcs sub-collection.
+    
+    Args:
+        campaign_id: str - The ID of the campaign to save the NPC to
+        name: str - The name of the NPC
+        npc_type: str - The type of NPC (e.g., 'merchant', 'quest_giver', 'enemy', 'ally')
+        description: str - Physical description and personality of the NPC
+        location: str - Where the NPC can typically be found
+        role: str - The NPC's role in the campaign or story
+        notes: str - Additional notes about the NPC
     """
     if not db:
         return "Error: Database client is not available."
-    if 'name' not in npc_data:
-        return "Error: NPC data must include a 'name' field."
+    if not name:
+        return "Error: NPC name is required."
 
-    npc_name = npc_data['name']
-    doc_id = npc_name.lower().replace(' ', '-')
+    doc_id = name.lower().replace(' ', '-')
     
     try:
+        # Create NPC data dictionary
+        npc_data = {
+            'name': name,
+            'campaign_id': campaign_id
+        }
+        
+        # Add optional fields if provided
+        if npc_type:
+            npc_data['npc_type'] = npc_type
+        if description:
+            npc_data['description'] = description
+        if location:
+            npc_data['location'] = location
+        if role:
+            npc_data['role'] = role
+        if notes:
+            npc_data['notes'] = notes
+        
         npc_ref = db.collection('campaigns').document(campaign_id).collection('npcs').document(doc_id)
-        npc_data['campaign_id'] = campaign_id
         npc_ref.set(npc_data)
-        print(f"[DatabaseManager] NPC '{npc_name}' saved to campaign '{campaign_id}' successfully.")
-        return f"NPC '{npc_name}' has been saved to campaign '{campaign_id}'."
+        print(f"[DatabaseManager] NPC '{name}' saved to campaign '{campaign_id}' successfully.")
+        return f"NPC '{name}' has been saved to campaign '{campaign_id}'."
     except Exception as e:
-        return f"Error saving NPC '{npc_name}' to campaign '{campaign_id}': {e}"
+        return f"Error saving NPC '{name}' to campaign '{campaign_id}': {e}"
 
 def load_npc_from_campaign(campaign_id: str, npc_name: str) -> dict:
     """
