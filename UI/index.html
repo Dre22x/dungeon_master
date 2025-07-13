@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Dungeon Master - Campaign Launcher</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Lora:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Lora', serif;
+            background-color: #1a1a1a;
+            background-image: url('https://www.transparenttextures.com/patterns/crissxcross.png'), linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8));
+            color: #e0e0e0;
+        }
+        .font-medieval {
+            font-family: 'MedievalSharp', cursive;
+        }
+        .main-container {
+            border: 1px solid #4a3a2a;
+            background-color: rgba(26, 26, 26, 0.85);
+            box-shadow: 0 0 30px rgba(255, 199, 0, 0.1);
+        }
+        .btn-primary {
+            font-family: 'MedievalSharp', cursive;
+            background-color: #8a6d3b;
+            border: 1px solid #7a5d2b;
+            color: #f5f5f5;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .btn-primary:hover {
+            background-color: #a08252;
+            box-shadow: 0 0 15px rgba(255, 199, 0, 0.3);
+            transform: translateY(-2px);
+        }
+        .input-field {
+            background-color: #2a2a2a;
+            border: 1px solid #4a3a2a;
+            color: #e0e0e0;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #8a6d3b;
+            box-shadow: 0 0 10px rgba(138, 109, 59, 0.5);
+        }
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #4a3a2a, transparent);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div id="main-menu" class="main-container rounded-lg p-8 md:p-12 w-full max-w-lg mx-auto">
+        
+        <header class="text-center mb-8">
+            <h1 class="font-medieval text-5xl md:text-6xl text-amber-300">Dungeon Master</h1>
+            <p class="text-lg text-gray-400 mt-2">Your adventure awaits...</p>
+        </header>
+
+        <div class="space-y-6">
+            <!-- New Campaign Button -->
+            <button id="newCampaignBtn" class="btn-primary w-full py-4 text-2xl rounded-md">
+                New Campaign
+            </button>
+
+            <!-- Divider -->
+            <div class="flex items-center">
+                <div class="divider flex-grow"></div>
+                <span class="px-4 text-gray-500 font-medieval text-lg">or</span>
+                <div class="divider flex-grow"></div>
+            </div>
+
+            <!-- Load Campaign Section -->
+            <div>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input id="campaignIdInput" type="text" placeholder="Enter Campaign ID..." class="input-field flex-grow px-4 py-3 rounded-md text-lg focus:ring-2 focus:ring-amber-400">
+                    <button id="loadCampaignBtn" class="btn-primary px-8 py-3 text-xl rounded-md">
+                        Load Campaign
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Area -->
+        <div id="messageArea" class="mt-8 text-center text-amber-400 h-6"></div>
+    </div>
+
+    <script>
+        const newCampaignBtn = document.getElementById('newCampaignBtn');
+        const loadCampaignBtn = document.getElementById('loadCampaignBtn');
+        const campaignIdInput = document.getElementById('campaignIdInput');
+        const messageArea = document.getElementById('messageArea');
+
+        // Event listener for the "New Campaign" button
+        newCampaignBtn.addEventListener('click', () => {
+            messageArea.textContent = 'Starting a new campaign...';
+            fetch('/new-campaign', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    messageArea.textContent = `New campaign created! ID: ${data.campaign_id}`;
+                    // Redirect to the ADK web interface
+                    if (data.adk_url) {
+                        setTimeout(() => {
+                            window.location.href = data.adk_url;
+                        }, 1500); // Give user time to see the success message
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    messageArea.textContent = 'Error starting new campaign.';
+                });
+        });
+
+        // Event listener for the "Load Campaign" button
+        loadCampaignBtn.addEventListener('click', () => {
+            const campaignId = campaignIdInput.value.trim();
+            if (!campaignId) {
+                messageArea.textContent = 'Please enter a Campaign ID.';
+                return;
+            }
+            
+            messageArea.textContent = `Loading campaign: ${campaignId}...`;
+            fetch(`/load-campaign/${campaignId}`, { method: 'GET' })
+                 .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Campaign not found');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    messageArea.textContent = `Successfully loaded campaign: ${data.campaign_id}`;
+                    // Redirect to the ADK web interface with campaign context
+                    if (data.adk_url) {
+                        setTimeout(() => {
+                            window.location.href = data.adk_url;
+                        }, 1500); // Give user time to see the success message
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    messageArea.textContent = 'Campaign ID not found.';
+                });
+        });
+    </script>
+
+</body>
+</html>
