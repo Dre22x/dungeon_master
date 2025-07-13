@@ -1,5 +1,4 @@
 import os
-import google.auth
 from google.cloud import firestore
 from google.oauth2 import service_account
 
@@ -35,78 +34,62 @@ db = get_db_client()
 
 # --- Campaign Management Tools ---
 
-def create_campaign(campaign_data: dict) -> str:
+def create_campaign(campaign_id: str, status: str = 'active') -> str:
     """
-    Creates a new campaign with all necessary sub-collections.
-    Required fields: 'id', 'name'
-    Optional fields: 'dm_name', 'description', 'settings', 'status'
+    Creates a new entry for a campaign in the 'campaigns' collection in the database.
+
+    Args:
+        campaign_id: str - Unique identifier for the campaign
+        status: str - Campaign status (default: 'active')
     """
     if not db:
         return "Error: Database client is not available."
-    if 'id' not in campaign_data or 'name' not in campaign_data:
-        return "Error: Campaign data must include 'id' and 'name' fields."
-
-    campaign_id = campaign_data['id']
-    campaign_name = campaign_data['name']
-    
-    try:
-        # Import firestore for SERVER_TIMESTAMP
-        from google.cloud import firestore
         
-        # Set default values if not provided
-        campaign_data.setdefault('dm_name', 'Dungeon Master')
-        campaign_data.setdefault('status', 'active')
-        campaign_data.setdefault('description', f'A D&D campaign run by {campaign_data["dm_name"]}')
-        campaign_data.setdefault('settings', {
-            'world': 'Forgotten Realms',
-            'starting_level': 1,
-            'max_level': 20
+    # Create the campaign document
+    campaign_ref = db.collection('campaigns').document(campaign_id)
+    campaign_ref.set({
+        'id': campaign_id,
+        'status': status,
+        'created_date': firestore.SERVER_TIMESTAMP
+    })
+        
+    # Create sub-collections
+    sub_collections = ['characters', 'npcs', 'monsters', 'locations', 'quests', 'notes']
+        
+    for sub_collection in sub_collections:
+        init_doc = campaign_ref.collection(sub_collection).document('_init')
+        init_doc.set({
+            'created': True,
+            'campaign_id': campaign_id,
         })
-        campaign_data['created_date'] = firestore.SERVER_TIMESTAMP
         
-        # Create the campaign document
-        campaign_ref = db.collection('campaigns').document(campaign_id)
-        campaign_ref.set(campaign_data)
-        
-        # Create sub-collections
-        sub_collections = ['characters', 'npcs', 'monsters', 'locations', 'quests', 'notes']
-        
-        for sub_collection in sub_collections:
-            init_doc = campaign_ref.collection(sub_collection).document('_init')
-            init_doc.set({
-                'created': True,
-                'description': f'Initialization document for {sub_collection} sub-collection',
-                'campaign_id': campaign_id,
-                'campaign_name': campaign_name
-            })
-        
-        print(f"[DatabaseManager] Campaign '{campaign_name}' created successfully with {len(sub_collections)} sub-collections.")
-        return f"Campaign '{campaign_name}' has been created successfully."
-        
-    except Exception as e:
-        return f"Error creating campaign '{campaign_name}': {e}"
+    print(f"[DatabaseManager] Campaign '{campaign_id}' created successfully with {len(sub_collections)} sub-collections.")
+    return f"Campaign '{campaign_id}' has been created successfully."
 
-def save_campaign(campaign_id: str, campaign_data: dict) -> str:
+def save_campaign(campaign_id: str, context: str) -> str:
     """
     Saves/updates a campaign to the 'campaigns' collection in Firestore.
+    Args:
+        campaign_id: str - The ID of the campaign to save.
+        context: str - The context of the campaign. This is a freeform summary of the main events of the campaign so far.
     """
     if not db:
         return "Error: Database client is not available."
-    if 'name' not in campaign_data:
-        return "Error: Campaign data must include a 'name' field."
 
     try:
         campaign_ref = db.collection('campaigns').document(campaign_id)
-        campaign_data['id'] = campaign_id
-        campaign_ref.set(campaign_data)
-        print(f"[DatabaseManager] Campaign '{campaign_data['name']}' saved successfully.")
-        return f"Campaign '{campaign_data['name']}' has been saved to the database."
+        campaign_ref.update({'context': context})
+        print(f"[DatabaseManager] Campaign '{campaign_id}' updated successfully.")
+        return f"Campaign '{campaign_id}' has been updated successfully."
+
     except Exception as e:
         return f"Error saving campaign '{campaign_id}': {e}"
 
-def get_campaign(campaign_id: str) -> dict:
+def load_campaign(campaign_id: str) -> dict:
     """
-    Loads a campaign by its ID.
+    Loads a campaign by its ID. This includes the context, characters, npcs, monsters, locations, quests, and notes.
+    Args:
+        campaign_id: str - The ID of the campaign to load.
     """
     if not db:
         return {"error": "Database client is not available."}
@@ -186,11 +169,63 @@ def delete_campaign(campaign_id: str) -> str:
     except Exception as e:
         return f"Error deleting campaign '{campaign_id}': {e}"
 
+def change_game_state(campaign_id: str, state: str) -> str:
+    """
+    Changes the state of a campaign.
+    """
+    if not db:
+        return "Error: Database client is not available."
+    if state not in ['exploration', 'combat', 'dialogue']:
+        return "Error: Invalid state. Must be one of: exploration, combat, dialogue."
+    try:
+        campaign_ref = db.collection('campaigns').document(campaign_id)
+        campaign_ref.update({'state': state})
+        return f"Campaign '{campaign_id}' state changed to '{state}' successfully."
+    except Exception as e:
+        return f"Error changing campaign '{campaign_id}' state to '{state}': {e}"
+    
+def get_game_state(campaign_id: str) -> str:
+    """
+    Gets the state of a campaign.
+    """
+    if not db:
+        return "Error: Database client is not available."
+    try:
+        campaign_ref = db.collection('campaigns').document(campaign_id)
+        campaign_doc = campaign_ref.get()
+        if campaign_doc.exists:
+            return campaign_doc.to_dict().get('state', 'unknown')
+        else:
+            return "Error: Campaign not found."
+    except Exception as e:
+        return f"Error getting campaign '{campaign_id}' state: {e}"
+
 # --- Character Management (Campaign-Specific) ---
 
 def save_character_to_campaign(campaign_id: str, character_data: dict) -> str:
     """
     Saves a character to a specific campaign's characters sub-collection.
+    Args:
+        campaign_id: str - The ID of the campaign to save the character to.
+        character_data: dict - The data to save for the character.
+            -   name: str - The name of the character.
+            -   class: str - The class of the character.
+            -   level: int - The level of the character.
+            -   race: str - The race of the character.
+            -   background: str - The background of the character.
+            -   alignment: str - The alignment of the character.
+            -   experience: int - The experience points of the character.
+            -   ability_scores: dict - The ability scores of the character.
+                -   strength: int - The strength score of the character.
+                -   dexterity: int - The dexterity score of the character.
+                -   constitution: int - The constitution score of the character.
+                -   intelligence: int - The intelligence score of the character.
+                -   wisdom: int - The wisdom score of the character.
+                -   charisma: int - The charisma score of the character.
+            -   inventory: list - The inventory of the character.
+            -   spells: list - The spells of the character.
+            -   equipment: list - The equipment of the character.
+            -   notes: str - The notes of the character.
     """
     if not db:
         return "Error: Database client is not available."
@@ -643,117 +678,3 @@ def get_campaign_stats(campaign_id: str) -> dict:
         
     except Exception as e:
         return {"error": f"Error getting campaign stats for '{campaign_id}': {e}"}
-
-# ==============================================================================
-#  EXAMPLE USAGE (for testing the script from the command line)
-# ==============================================================================
-if __name__ == '__main__':
-    print("\n--- Testing Campaign-Centric Database Utils ---")
-    
-    # Example: List all campaigns
-    print("\n1. Listing all campaigns...")
-    campaigns = list_all_campaigns()
-    if 'error' not in campaigns:
-        print(f"   Found {campaigns['count']} campaigns:")
-        for campaign in campaigns['campaigns']:
-            print(f"     - {campaign.get('name', 'Unknown')} (ID: {campaign.get('id', 'Unknown')})")
-    else:
-        print(f"   Error: {campaigns['error']}")
-    
-    # Example: Get campaign stats
-    print("\n2. Getting campaign stats...")
-    stats = get_campaign_stats('lost-mines-phandelver')
-    if 'error' not in stats:
-        print(f"   Campaign: {stats['campaign_name']}")
-        print(f"   DM: {stats['dm_name']}")
-        print(f"   Total items: {stats['total_items']}")
-        for sub_collection, sub_stats in stats['sub_collections'].items():
-            print(f"     {sub_collection}: {sub_stats['document_count']} items")
-    else:
-        print(f"   Error: {stats['error']}")
-    
-    # Example: List characters in a campaign
-    print("\n3. Listing characters in campaign...")
-    characters = list_characters_in_campaign('lost-mines-phandelver')
-    if 'error' not in characters:
-        print(f"   Found {characters['count']} characters:")
-        for char in characters['characters']:
-            print(f"     - {char.get('name', 'Unknown')} (Level {char.get('level', '?')} {char.get('class', 'Unknown')})")
-    else:
-        print(f"   Error: {characters['error']}")
-    
-    # Example: Create a new campaign
-    print("\n4. Creating a new test campaign...")
-    new_campaign = {
-        "id": "test-campaign",
-        "name": "Test Campaign",
-        "dm_name": "Test DM",
-        "description": "A test campaign for demonstration"
-    }
-    result = create_campaign(new_campaign)
-    print(f"   {result}")
-    
-    # Example: Save a character to the new campaign
-    print("\n5. Saving a character to the new campaign...")
-    test_character = {
-        "name": "Test Character",
-        "race": "Human",
-        "class": "Wizard",
-        "level": 1,
-        "ability_scores": {"STR": 8, "DEX": 12, "CON": 10, "INT": 16, "WIS": 14, "CHA": 13}
-    }
-    save_result = save_character_to_campaign('test-campaign', test_character)
-    print(f"   {save_result}")
-    
-    # Example: Add items to character
-    print("\n6. Adding items to character...")
-    sword_item = {
-        "name": "Longsword",
-        "type": "Weapon",
-        "damage": "1d8 slashing",
-        "properties": ["Versatile (1d10)"]
-    }
-    add_item_result = add_item_to_character('test-campaign', 'Test Character', sword_item)
-    print(f"   {add_item_result}")
-    
-    # Example: Add spell to character
-    print("\n7. Adding spell to character...")
-    fireball_spell = {
-        "name": "Fireball",
-        "level": 3,
-        "school": "Evocation",
-        "casting_time": "1 action",
-        "range": "150 feet",
-        "components": ["V", "S", "M (a tiny ball of bat guano and sulfur)"],
-        "duration": "Instantaneous",
-        "description": "A bright streak flashes from your pointing finger to a point you choose within range..."
-    }
-    add_spell_result = add_spell_to_character('test-campaign', 'Test Character', fireball_spell)
-    print(f"   {add_spell_result}")
-    
-    # Example: Get character items and spells
-    print("\n8. Getting character items and spells...")
-    items_result = get_character_items('test-campaign', 'Test Character')
-    if 'error' not in items_result:
-        print(f"   Character has {items_result['count']} items:")
-        for item in items_result['items']:
-            print(f"     - {item.get('name', 'Unknown')} ({item.get('type', 'Unknown')})")
-    
-    spells_result = get_character_spells('test-campaign', 'Test Character')
-    if 'error' not in spells_result:
-        print(f"   Character has {spells_result['count']} spells:")
-        for spell in spells_result['spells']:
-            print(f"     - {spell.get('name', 'Unknown')} (Level {spell.get('level', '?')})")
-    
-    print("\nUpdated Database Structure:")
-    print("campaigns/")
-    print("  ├── {campaign_id}/")
-    print("  │   ├── characters/")
-    print("  │   │   └── {character_name}/")
-    print("  │   │       ├── equipment/ (items as part of character data)")
-    print("  │   │       └── spells/ (spells as part of character data)")
-    print("  │   ├── npcs/")
-    print("  │   ├── monsters/")
-    print("  │   ├── locations/")
-    print("  │   ├── quests/")
-    print("  │   └── notes/")

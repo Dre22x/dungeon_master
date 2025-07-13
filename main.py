@@ -7,7 +7,9 @@ import os
 
 os.environ["GOOGLE_API_KEY"] = "AIzaSyAMEgPT8FjJ2ToGvTsn2o0GoodN_wV4Qy8"
 
-MODEL_NAME = "gemini-2.0-flash"
+# MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-2.0-flash-lite"
+
 APP_NAME = "dungeon_master"
 USER_ID = "user_1"
 SESSION_ID = "session_01"

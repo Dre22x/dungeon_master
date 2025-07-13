@@ -17,7 +17,8 @@ from tools.misc_tools import roll_dice
 from firestore.db_utils import *
 
 # Globals
-MODEL_NAME = "gemini-2.0-flash"
+# MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-2.5-flash-lite-preview-06-17"
 
 # --- Create Sub Agents ---
 narrative_agent = LlmAgent(
