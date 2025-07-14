@@ -1,0 +1,45 @@
+agents:
+  - name: root_agent
+    description: "Master orchestrator and Game Master for a Dungeons & Dragons campaign"
+    model: gemini-2.5-flash-lite-preview-06-17
+    instruction_file: agents/instructions/root_agent.txt
+    sub_agents:
+      - narrative_agent
+      - npc_agent
+      - rules_lawyer_agent
+      - character_creation_agent
+      - player_interface_agent
+    tools:
+      - create_campaign
+      - save_character_to_campaign
+      - change_game_state
+      - get_game_state
+      - save_campaign
+      - load_campaign
+
+  - name: narrative_agent
+    description: "Provides environmental descriptions and story progression"
+    model: gemini-2.5-flash-lite-preview-06-17
+    instruction_file: agents/instructions/narrative_agent.txt
+
+  - name: npc_agent
+    description: "Roleplays NPCs during dialogue interactions"
+    model: gemini-2.5-flash-lite-preview-06-17
+    instruction_file: agents/instructions/npc_agent.txt
+
+  - name: rules_lawyer_agent
+    description: "Handles combat, skill checks, and game mechanics"
+    model: gemini-2.5-flash-lite-preview-06-17
+    instruction_file: agents/instructions/rules_lawyer_agent.txt
+
+  - name: character_creation_agent
+    description: "Assists with character creation process"
+    model: gemini-2.5-flash-lite-preview-06-17
+    instruction_file: agents/instructions/character_creation_agent.txt
+
+  - name: player_interface_agent
+    description: "Handles ALL direct player communication and routes to appropriate specialists"
+    model: gemini-2.5-flash-lite-preview-06-17
+    instruction_file: agents/instructions/player_interface_agent.txt
+
+app_name: dungeon_master 

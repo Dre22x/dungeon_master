@@ -96,7 +96,22 @@ def get_equipment_details(equipment_name: str) -> dict:
 
 def get_starting_equipment(class_name: str) -> dict:
     """Tool to get the starting equipment for a specific class."""
-    return _get_item_details("starting-equipment", class_name)
+    # Get the class details which include starting equipment options
+    class_data = _get_item_details("classes", class_name)
+    
+    if "error" in class_data:
+        return class_data
+    
+    # Extract starting equipment information
+    starting_equipment = class_data.get("starting_equipment", [])
+    starting_equipment_options = class_data.get("starting_equipment_options", [])
+    
+    return {
+        "class_name": class_name,
+        "starting_equipment": starting_equipment,
+        "starting_equipment_options": starting_equipment_options,
+        "description": f"Starting equipment options for {class_name.title()}"
+    }
 
 
 def get_all_equipments() -> list[dict]:

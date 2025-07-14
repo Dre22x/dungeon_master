@@ -4,7 +4,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from firestore import db_utils
-from agents import agent as root_agent
+from agents.agent import root_agent
 
 # Initialize the Flask application
 app = Flask(__name__, template_folder='.')
@@ -37,20 +37,86 @@ def index():
     """
     return render_template('index.html')
 
+async def initialize_agent_for_new_campaign(campaign_id: str):
+    """
+    Initializes the GM agent for a new campaign.
+    """
+    from google.adk.sessions import InMemorySessionService
+    from google.adk.runners import Runner
+    from google.genai import types
+    
+    # Set up the session and runner
+    session_service = InMemorySessionService()
+    session = await session_service.create_session(
+        app_name="dungeon_master",
+        user_id="user_1",
+        session_id=f"session_{campaign_id}",
+    )
+
+    runner = Runner(
+        agent=root_agent,
+        app_name="dungeon_master",
+        session_service=session_service
+    )
+
+    # Create a message that instructs the agent to start a new campaign
+    new_campaign_instruction = f"""
+I want to start a new campaign with ID: {campaign_id}
+
+Please begin the character creation process and then start a new adventure.
+The campaign has been created in the database and is ready for you to manage.
+"""
+
+    content = types.Content(
+        role='user', 
+        parts=[types.Part(text=new_campaign_instruction)]
+    )
+
+    # Run the agent workflow to start the new campaign
+    async for event in runner.run_async(
+        user_id="user_1", 
+        session_id=f"session_{campaign_id}", 
+        new_message=content
+    ):
+        if event.is_final_response():
+            if event.content and event.content.parts:
+                final_response = event.content.parts[0].text
+                print(f"[Root Agent] New campaign {campaign_id} started: {final_response}")
+                return final_response
+            break
+
 @app.route('/new-campaign', methods=['POST'])
 def new_campaign():
     """
     API endpoint to handle the creation of a new campaign.
-    Creates the campaign in the database and redirects to the ADK web interface.
+    Creates the campaign in the database and initializes the agent.
     """
+    import asyncio
+    
     campaign_id = initialize_new_campaign_in_db()
     
-    # Return the campaign ID and ADK web interface URL
-    return jsonify({
-        "status": "success", 
-        "campaign_id": campaign_id,
-        "adk_url": f"http://localhost:8000/dev-ui/?app=UI"
-    })
+    # Initialize the agent for the new campaign
+    try:
+        # Run the async function to initialize the agent
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        agent_response = loop.run_until_complete(initialize_agent_for_new_campaign(campaign_id))
+        loop.close()
+        
+        return jsonify({
+            "status": "success", 
+            "campaign_id": campaign_id,
+            "agent_response": agent_response,
+            "adk_url": f"http://localhost:8000/dev-ui/?app=agents&session=session_{campaign_id}"
+        })
+    except Exception as e:
+        print(f"Error initializing agent for new campaign: {e}")
+        return jsonify({
+            "status": "success", 
+            "campaign_id": campaign_id,
+            "agent_response": "Campaign created but agent initialization failed",
+            "adk_url": f"http://localhost:8000/dev-ui/?app=agents&session=session_{campaign_id}"
+        })
 
 async def initialize_agent_with_campaign(campaign_id: str, campaign_data: dict):
     """
@@ -74,14 +140,28 @@ async def initialize_agent_with_campaign(campaign_id: str, campaign_data: dict):
         session_service=session_service
     )
 
-    # Create a comprehensive message with campaign data
+    # Format the campaign data for the agent
+    import json
+    formatted_campaign_data = json.dumps(campaign_data, indent=2)
+    
     campaign_summary = f"""
-Campaign ID: {campaign_id}
-Campaign Data: {campaign_data}
+CAMPAIGN CONTEXT - Campaign ID: {campaign_id}
 
-Please load this campaign and prepare to continue the story. 
-The campaign data has been loaded from the database and includes all characters, NPCs, monsters, locations, quests, and notes.
-Use the load_campaign tool to get the full context and continue the adventure.
+CAMPAIGN DATA:
+{formatted_campaign_data}
+
+This is an existing campaign that has been loaded from the database. 
+The campaign data above contains all the current state including:
+- Characters and their stats
+- NPCs and their relationships
+- Monsters and encounters
+- Locations and quests
+- Campaign notes and story context
+- Previous story events and decisions
+
+Your task is to continue this campaign from where it left off. 
+Study the campaign data carefully and be ready to continue the story seamlessly.
+Do NOT start a new campaign or character creation process.
 """
 
     content = types.Content(
