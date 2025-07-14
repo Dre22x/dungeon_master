@@ -15,13 +15,11 @@ from tools.traits import *
 from tools.weapons import *
 from tools.misc_tools import roll_dice
 from tools.tools import get_starting_equipment
+from tools.campaign_outline import generate_campaign_outline, load_campaign_outline
 from firestore.db_utils import *
+from agents.config_loader import get_model_for_agent
 import os
 import sys
-
-# Globals
-# MODEL_NAME = "gemini-2.0-flash"
-MODEL_NAME = "gemini-2.5-flash-lite-preview-06-17"
 
 def load_instructions(filename: str) -> str:
     """
@@ -39,19 +37,20 @@ def load_instructions(filename: str) -> str:
 # --- Create Sub Agents ---
 narrative_agent = LlmAgent(
   name="narrative_agent",
-  model=MODEL_NAME,
+  model=get_model_for_agent("narrative_agent"),
   description="You are the world's greatest storyteller, a master of prose and atmosphere. Your purpose is to paint a vivid picture of the world for the players, engaging all their senses. You are to be creative, evocative, and compelling. ",
   instruction=load_instructions("narrative_agent.txt"),
   tools=[get_game_state, change_game_state, load_campaign, save_npc_to_campaign,
          get_all_monsters, get_monster_details,
          get_all_races, get_race_details,
          get_all_magic_items, get_magic_item_details,
-         get_all_spells, get_spell_details]
+         get_all_spells, get_spell_details,
+         generate_campaign_outline, load_campaign_outline]
 )
 
 npc_agent = LlmAgent(
   name="npc_agent",
-  model=MODEL_NAME,
+  model=get_model_for_agent("npc_agent"),
   description="You are a master method actor. Your sole purpose is to embody and roleplay as any Non-Player Character (NPC) in the game world. ",
   instruction=load_instructions("npc_agent.txt"),
     tools=[load_npc_from_campaign, save_npc_to_campaign]
@@ -59,7 +58,7 @@ npc_agent = LlmAgent(
 
 rules_lawyer_agent = LlmAgent(
   name="rules_lawyer_agent",
-  model=MODEL_NAME,
+  model=get_model_for_agent("rules_lawyer_agent"),
   description="You are an impartial and highly precise 'Rules Lawyer' for a Dungeons and Dragons 5th Edition game. Your job is to be the ultimate authority on game mechanics. You are logical, factual, and concise. You do not have a personality and you never roleplay. ",
   instruction=load_instructions("rules_lawyer_agent.txt"),
     tools=[get_spell_details, 
@@ -120,7 +119,7 @@ rules_lawyer_agent = LlmAgent(
 
 player_interface_agent = LlmAgent(
   name="player_interface_agent",
-  model=MODEL_NAME,
+  model=get_model_for_agent("player_interface_agent"),
   description="You are the Player Interface Agent - the central hub for all player interactions in the Dungeons & Dragons game. You are the ONLY agent that directly communicates with the player. All other agents communicate through you. ",
   instruction=load_instructions("player_interface_agent.txt"),
     tools=[change_game_state, get_game_state, load_npc_from_campaign, load_campaign]
@@ -129,7 +128,7 @@ player_interface_agent = LlmAgent(
 
 character_creation_agent = LlmAgent(
   name="character_creation_agent",
-  model=MODEL_NAME,
+  model=get_model_for_agent("character_creation_agent"),
   description="You are a friendly and knowledgeable Character Creation Assistant for Dungeons & Dragons 5th Edition. Your goal is to help a new player create their very first character. You are patient, encouraging, and an expert at explaining complex game concepts in a simple and engaging way. ",
   instruction=load_instructions("character_creation_agent.txt"),
     tools=[get_spell_details, 

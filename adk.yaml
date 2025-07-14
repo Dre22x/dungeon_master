@@ -16,11 +16,25 @@ agents:
       - get_game_state
       - save_campaign
       - load_campaign
+      - load_campaign_outline
 
   - name: narrative_agent
     description: "Provides environmental descriptions and story progression"
     model: gemini-2.5-flash-lite-preview-06-17
     instruction_file: agents/instructions/narrative_agent.txt
+    tools:
+      - load_campaign
+      - save_npc_to_campaign
+      - generate_campaign_outline
+      - load_campaign_outline
+      - get_all_monsters
+      - get_monster_details
+      - get_all_races
+      - get_race_details
+      - get_all_magic_items
+      - get_magic_item_details
+      - get_all_spells
+      - get_spell_details
 
   - name: npc_agent
     description: "Roleplays NPCs during dialogue interactions"
