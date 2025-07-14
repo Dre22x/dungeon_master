@@ -6,6 +6,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from firestore import db_utils
 from agents.agent import root_agent
 import datetime
+import json
+import threading
+import queue
+from flask_sock import Sock
 
 def make_json_serializable(obj):
     if isinstance(obj, dict):
@@ -20,19 +24,62 @@ def make_json_serializable(obj):
 # Initialize the Flask application
 app = Flask(__name__, template_folder='.')
 
+# Initialize WebSocket extension
+sock = Sock(app)
+
 # Global session service for persistent sessions
 from google.adk.sessions import InMemorySessionService
 session_service = InMemorySessionService()
+
+# Global debug message queue for streaming debug output
+debug_messages = queue.Queue()
+debug_subscribers = set()
 
 # ==============================================================================
 #  AGENT & DATABASE LOGIC (Placeholders)
 #  This is where you would import and call your existing Python agent code.
 # ==============================================================================
 
+def send_debug_message(message, message_type='info', campaign_id=None):
+    """Send a debug message to all connected clients."""
+    debug_data = {
+        'message': message,
+        'type': message_type,
+        'campaign_id': campaign_id,
+        'timestamp': datetime.datetime.now().isoformat()
+    }
+    debug_messages.put(debug_data)
+    
+    # Send to all connected subscribers
+    for ws in list(debug_subscribers):
+        try:
+            ws.send(json.dumps(debug_data))
+        except Exception as e:
+            print(f"Error sending debug message: {e}")
+            debug_subscribers.discard(ws)
+
+@sock.route('/debug-stream/<campaign_id>')
+def debug_stream(ws, campaign_id):
+    """WebSocket endpoint for streaming debug output."""
+    debug_subscribers.add(ws)
+    send_debug_message(f"Debug stream connected for campaign {campaign_id}", 'info', campaign_id)
+    
+    try:
+        while True:
+            # Keep connection alive
+            ws.receive()
+    except Exception as e:
+        print(f"Debug WebSocket error: {e}")
+    finally:
+        debug_subscribers.discard(ws)
+        send_debug_message(f"Debug stream disconnected for campaign {campaign_id}", 'warning', campaign_id)
+
 def initialize_new_campaign_in_db():
     print("BACKEND: GM Agent is creating a new campaign...")
     new_id = str(uuid.uuid4())[:8] # Generate a simple unique ID
+    send_debug_message(f"Creating new campaign with ID: {new_id}", 'info')
     db_utils.create_campaign(new_id)
+    send_debug_message(f"Campaign {new_id} created successfully in database", 'info')
     return new_id
 
 def load_campaign_from_db(campaign_id):
@@ -66,6 +113,8 @@ async def initialize_agent_for_new_campaign(campaign_id: str):
     from google.adk.runners import Runner
     from google.genai import types
     
+    send_debug_message(f"Initializing root agent for new campaign {campaign_id}", 'agent_transfer')
+    
     # Set up the session and runner using global session service
     session = await session_service.create_session(
         app_name="dungeon_master",
@@ -92,16 +141,27 @@ The campaign has been created in the database and is ready for you to manage.
         parts=[types.Part(text=new_campaign_instruction)]
     )
 
+    send_debug_message(f"Sending new campaign instruction to root agent", 'console')
+
     # Run the agent workflow to start the new campaign
     async for event in runner.run_async(
         user_id="user_1", 
         session_id=f"session_{campaign_id}", 
         new_message=content
     ):
+        # Debug logging for agent events during initialization
+        if hasattr(event, 'agent') and event.agent:
+            send_debug_message(f"Agent called during initialization: {event.agent.name}", 'agent_transfer', campaign_id)
+        
+        if hasattr(event, 'actions') and event.actions:
+            if hasattr(event.actions, 'escalate') and event.actions.escalate:
+                send_debug_message(f"Agent escalated during initialization: {event.actions.escalate.agent_name}", 'agent_transfer', campaign_id)
+        
         if event.is_final_response():
             if event.content and event.content.parts:
                 final_response = event.content.parts[0].text
                 print(f"[Root Agent] New campaign {campaign_id} started: {final_response}")
+                send_debug_message(f"Root agent completed new campaign initialization", 'agent_transfer', campaign_id)
                 return final_response
             break
 
@@ -156,6 +216,100 @@ def get_campaign_characters(campaign_id):
         print(f"Error getting characters for campaign {campaign_id}: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/equipment/<string:equipment_name>', methods=['GET'])
+def get_equipment_details(equipment_name):
+    """
+    API endpoint to get detailed information about a piece of equipment.
+    """
+    try:
+        from tools.equipment import get_equipment_details
+        details = get_equipment_details(equipment_name)
+        return jsonify({
+            "status": "success",
+            "details": details
+        })
+    except Exception as e:
+        print(f"Error getting equipment details for {equipment_name}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/spells/<string:spell_name>', methods=['GET'])
+def get_spell_details(spell_name):
+    """
+    API endpoint to get detailed information about a spell.
+    """
+    try:
+        from tools.spells import get_spell_details
+        details = get_spell_details(spell_name)
+        return jsonify({
+            "status": "success",
+            "details": details
+        })
+    except Exception as e:
+        print(f"Error getting spell details for {spell_name}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/skills/<string:skill_name>', methods=['GET'])
+def get_skill_details(skill_name):
+    """
+    API endpoint to get detailed information about a skill.
+    """
+    try:
+        from tools.character_data import get_skill_details
+        details = get_skill_details(skill_name)
+        return jsonify({
+            "status": "success",
+            "details": details
+        })
+    except Exception as e:
+        print(f"Error getting skill details for {skill_name}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/proficiencies/<string:proficiency_name>', methods=['GET'])
+def get_proficiency_details(proficiency_name):
+    """
+    API endpoint to get detailed information about a proficiency.
+    """
+    try:
+        from tools.character_data import get_proficiency_details
+        details = get_proficiency_details(proficiency_name)
+        return jsonify({
+            "status": "success",
+            "details": details
+        })
+    except Exception as e:
+        print(f"Error getting proficiency details for {proficiency_name}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/skills_index', methods=['GET'])
+def get_skills_index():
+    """
+    Returns a mapping of skill display names to their API indexes.
+    """
+    try:
+        from tools.character_data import get_all_skills
+        skills_data = get_all_skills()
+        # skills_data is a dict with 'results' key containing the list
+        skills = skills_data.get('results', [])
+        mapping = {s['name']: s['index'] for s in skills}
+        return jsonify({"status": "success", "mapping": mapping})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/proficiencies_index', methods=['GET'])
+def get_proficiencies_index():
+    """
+    Returns a mapping of proficiency display names to their API indexes.
+    """
+    try:
+        from tools.character_data import get_all_proficiencies
+        profs_data = get_all_proficiencies()
+        # profs_data is a dict with 'results' key containing the list
+        profs = profs_data.get('results', [])
+        mapping = {p['name']: p['index'] for p in profs}
+        return jsonify({"status": "success", "mapping": mapping})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 async def initialize_agent_with_campaign(campaign_id: str, campaign_data: dict):
     """
     Initializes the GM agent with the loaded campaign data.
@@ -177,7 +331,6 @@ async def initialize_agent_with_campaign(campaign_id: str, campaign_data: dict):
     )
 
     # Format the campaign data for the agent
-    import json
     formatted_campaign_data = json.dumps(campaign_data, indent=2)
     
     # Create a more detailed campaign summary
@@ -236,10 +389,19 @@ IMPORTANT: Provide a brief summary of the campaign so far as your first response
         session_id=f"session_{campaign_id}", 
         new_message=content
     ):
+        # Debug logging for agent events during campaign loading
+        if hasattr(event, 'agent') and event.agent:
+            send_debug_message(f"Agent called during campaign loading: {event.agent.name}", 'agent_transfer', campaign_id)
+        
+        if hasattr(event, 'actions') and event.actions:
+            if hasattr(event.actions, 'escalate') and event.actions.escalate:
+                send_debug_message(f"Agent escalated during campaign loading: {event.actions.escalate.agent_name}", 'agent_transfer', campaign_id)
+        
         if event.is_final_response():
             if event.content and event.content.parts:
                 final_response = event.content.parts[0].text
                 print(f"[Root Agent] Campaign {campaign_id} loaded: {final_response}")
+                send_debug_message(f"Root agent completed campaign loading", 'agent_transfer', campaign_id)
                 return final_response
             break
 
@@ -364,6 +526,8 @@ def chat():
     if not campaign_id or not message:
         return jsonify({"status": "error", "message": "Campaign ID and message are required"}), 400
     
+    send_debug_message(f"Received chat message: '{message[:50]}{'...' if len(message) > 50 else ''}'", 'api', campaign_id)
+    
     try:
         # Set up the runner using global session service
         runner = Runner(
@@ -378,6 +542,8 @@ def chat():
             parts=[types.Part(text=message)]
         )
 
+        send_debug_message(f"Routing message to root agent", 'agent_transfer', campaign_id)
+
         # Run the agent workflow
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -390,6 +556,14 @@ def chat():
                 session_id=f"session_{campaign_id}", 
                 new_message=content
             ):
+                # Debug logging for agent events
+                if hasattr(event, 'agent') and event.agent:
+                    send_debug_message(f"Agent called: {event.agent.name}", 'agent_transfer', campaign_id)
+                
+                if hasattr(event, 'actions') and event.actions:
+                    if hasattr(event.actions, 'escalate') and event.actions.escalate:
+                        send_debug_message(f"Agent escalated to: {event.actions.escalate.agent_name}", 'agent_transfer', campaign_id)
+                
                 if event.is_final_response():
                     if event.content and event.content.parts:
                         return event.content.parts[0].text
@@ -398,6 +572,8 @@ def chat():
         agent_response = loop.run_until_complete(run_agent())
         loop.close()
         
+        send_debug_message(f"Root agent response received", 'agent_transfer', campaign_id)
+        
         return jsonify({
             "status": "success",
             "agent_response": agent_response
@@ -405,6 +581,7 @@ def chat():
         
     except Exception as e:
         print(f"Error in chat: {e}")
+        send_debug_message(f"Error in chat: {str(e)}", 'error', campaign_id)
         return jsonify({
             "status": "error",
             "message": str(e)

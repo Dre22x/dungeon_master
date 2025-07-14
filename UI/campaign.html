@@ -120,8 +120,11 @@
             <button id="chatTab" class="btn-primary px-6 py-3 text-lg rounded-l-md border-r border-amber-600">
                 Chat
             </button>
-            <button id="charactersTab" class="btn-primary px-6 py-3 text-lg rounded-r-md opacity-75 hover:opacity-100">
+            <button id="charactersTab" class="btn-primary px-6 py-3 text-lg border-r border-amber-600 opacity-75 hover:opacity-100">
                 Characters
+            </button>
+            <button id="debugTab" class="btn-primary px-6 py-3 text-lg rounded-r-md opacity-75 hover:opacity-100">
+                Debug
             </button>
         </div>
 
@@ -170,6 +173,34 @@
             </div>
         </div>
 
+        <!-- Debug Tab Content -->
+        <div id="debugTabContent" class="main-container rounded-lg p-6 hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-medieval text-2xl text-amber-300">Debug Console</h3>
+                <div class="flex gap-2">
+                    <button id="clearDebugBtn" class="btn-primary px-4 py-2 text-sm rounded-md">
+                        Clear
+                    </button>
+                    <button id="toggleAutoScrollBtn" class="btn-primary px-4 py-2 text-sm rounded-md">
+                        Auto-scroll: ON
+                    </button>
+                </div>
+            </div>
+            <div id="debugContainer" class="bg-black border border-gray-600 rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm">
+                <div class="text-green-400">Debug console initialized...</div>
+                <div class="text-yellow-400">Waiting for debug output...</div>
+            </div>
+            <div class="mt-4 text-sm text-gray-400">
+                <p>This console shows:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                    <li>Agent transfers and handoffs</li>
+                    <li>Console output from the backend</li>
+                    <li>API calls and responses</li>
+                    <li>Error messages and debugging info</li>
+                </ul>
+            </div>
+        </div>
+
         <!-- Character Detail Modal -->
         <div id="characterModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
             <div class="flex items-center justify-center min-h-screen p-4">
@@ -198,6 +229,99 @@
     <script>
         let currentCampaignId = null;
         let isInitialized = false;
+        let debugWebSocket = null;
+        let autoScrollEnabled = true;
+
+        // Debug console functions
+        function addDebugMessage(message, type = 'info') {
+            const debugContainer = document.getElementById('debugContainer');
+            const messageDiv = document.createElement('div');
+            
+            const timestamp = new Date().toLocaleTimeString();
+            let colorClass = 'text-gray-300';
+            
+            switch (type) {
+                case 'agent_transfer':
+                    colorClass = 'text-cyan-400';
+                    message = `🔄 [${timestamp}] AGENT TRANSFER: ${message}`;
+                    break;
+                case 'console':
+                    colorClass = 'text-green-400';
+                    message = `📝 [${timestamp}] CONSOLE: ${message}`;
+                    break;
+                case 'api':
+                    colorClass = 'text-blue-400';
+                    message = `🌐 [${timestamp}] API: ${message}`;
+                    break;
+                case 'error':
+                    colorClass = 'text-red-400';
+                    message = `❌ [${timestamp}] ERROR: ${message}`;
+                    break;
+                case 'warning':
+                    colorClass = 'text-yellow-400';
+                    message = `⚠️ [${timestamp}] WARNING: ${message}`;
+                    break;
+                default:
+                    colorClass = 'text-gray-300';
+                    message = `ℹ️ [${timestamp}] ${message}`;
+            }
+            
+            messageDiv.className = colorClass;
+            messageDiv.textContent = message;
+            debugContainer.appendChild(messageDiv);
+            
+            if (autoScrollEnabled) {
+                debugContainer.scrollTop = debugContainer.scrollHeight;
+            }
+        }
+
+        function clearDebugConsole() {
+            const debugContainer = document.getElementById('debugContainer');
+            debugContainer.innerHTML = '<div class="text-green-400">Debug console cleared...</div>';
+        }
+
+        function toggleAutoScroll() {
+            autoScrollEnabled = !autoScrollEnabled;
+            const button = document.getElementById('toggleAutoScrollBtn');
+            button.textContent = `Auto-scroll: ${autoScrollEnabled ? 'ON' : 'OFF'}`;
+            
+            if (autoScrollEnabled) {
+                const debugContainer = document.getElementById('debugContainer');
+                debugContainer.scrollTop = debugContainer.scrollHeight;
+            }
+        }
+
+        function setupDebugWebSocket() {
+            if (debugWebSocket) {
+                debugWebSocket.close();
+            }
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/debug-stream/${currentCampaignId}`;
+            
+            debugWebSocket = new WebSocket(wsUrl);
+            
+            debugWebSocket.onopen = function() {
+                addDebugMessage('WebSocket connection established for debug stream', 'info');
+            };
+            
+            debugWebSocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    addDebugMessage(data.message, data.type);
+                } catch (error) {
+                    addDebugMessage(`Failed to parse debug message: ${error.message}`, 'error');
+                }
+            };
+            
+            debugWebSocket.onerror = function(error) {
+                addDebugMessage(`WebSocket error: ${error}`, 'error');
+            };
+            
+            debugWebSocket.onclose = function() {
+                addDebugMessage('WebSocket connection closed', 'warning');
+            };
+        }
 
         // Get campaign ID from URL parameters
         function getCampaignIdFromUrl() {
@@ -216,6 +340,9 @@
             currentCampaignId = campaignId;
             document.getElementById('campaignId').textContent = campaignId;
             document.getElementById('campaignStatus').textContent = 'Initializing...';
+
+            // Set up debug WebSocket connection
+            setupDebugWebSocket();
 
             try {
                 // Initialize the agent for this campaign
@@ -292,6 +419,9 @@
             showMessage(message, 'user');
             input.value = '';
 
+            // Add debug logging
+            addDebugMessage(`Sending message: "${message}"`, 'api');
+
             // Show typing indicator
             const typingIndicator = document.getElementById('typingIndicator');
             typingIndicator.style.display = 'block';
@@ -310,6 +440,9 @@
 
                 const data = await response.json();
                 
+                // Add debug logging for response
+                addDebugMessage(`Received response: ${data.status}`, 'api');
+                
                 // Hide typing indicator
                 typingIndicator.style.display = 'none';
 
@@ -317,11 +450,13 @@
                     showMessage(data.agent_response, 'agent');
                 } else {
                     showMessage('Error: ' + data.message, 'system');
+                    addDebugMessage(`Error: ${data.message}`, 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
                 typingIndicator.style.display = 'none';
                 showMessage('Error sending message', 'system');
+                addDebugMessage(`Network error: ${error.message}`, 'error');
             }
         }
 
@@ -342,12 +477,15 @@
             // Hide all tab contents
             document.getElementById('chatTabContent').classList.add('hidden');
             document.getElementById('charactersTabContent').classList.add('hidden');
+            document.getElementById('debugTabContent').classList.add('hidden'); // Hide debug tab content
             
             // Remove active state from all tabs
             document.getElementById('chatTab').classList.remove('opacity-100');
             document.getElementById('chatTab').classList.add('opacity-75');
             document.getElementById('charactersTab').classList.remove('opacity-100');
             document.getElementById('charactersTab').classList.add('opacity-75');
+            document.getElementById('debugTab').classList.remove('opacity-100');
+            document.getElementById('debugTab').classList.add('opacity-75');
             
             // Show selected tab content
             document.getElementById(tabName + 'TabContent').classList.remove('hidden');
@@ -359,6 +497,11 @@
             // Load characters if switching to characters tab
             if (tabName === 'characters') {
                 loadCharacters();
+            }
+            
+            // Set up debug WebSocket if switching to debug tab
+            if (tabName === 'debug' && currentCampaignId) {
+                setupDebugWebSocket();
             }
         }
 
@@ -438,6 +581,11 @@
             const inventory = character.inventory || [];
             const spells = character.spells || [];
             
+            // Debug logging
+            console.log('Character data:', character);
+            console.log('Skills:', skills);
+            console.log('Proficiencies:', proficiencies);
+            
             characterDetails.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Basic Info -->
@@ -472,7 +620,18 @@
                 <div class="space-y-2">
                     <h3 class="font-medieval text-lg text-amber-300">Skills</h3>
                     <div class="bg-gray-700 p-3 rounded">
-                        <p class="text-sm">${skills.length > 0 ? skills.join(', ') : 'No skills listed'}</p>
+                        ${skills.length > 0 ? 
+                            skills.map(skill => `
+                                <div class="skill-item mb-2">
+                                    <button class="text-amber-300 hover:text-amber-200 text-sm font-medium expand-btn" 
+                                            data-type="skill" data-name="${skill}">
+                                        📖 ${skill}
+                                    </button>
+                                    <div class="skill-details hidden mt-2 p-2 bg-gray-600 rounded text-xs"></div>
+                                </div>
+                            `).join('') : 
+                            '<p class="text-sm text-gray-400">No skills listed</p>'
+                        }
                     </div>
                 </div>
                 
@@ -480,7 +639,18 @@
                 <div class="space-y-2">
                     <h3 class="font-medieval text-lg text-amber-300">Proficiencies</h3>
                     <div class="bg-gray-700 p-3 rounded">
-                        <p class="text-sm">${proficiencies.length > 0 ? proficiencies.join(', ') : 'No proficiencies listed'}</p>
+                        ${proficiencies.length > 0 ? 
+                            proficiencies.map(prof => `
+                                <div class="proficiency-item mb-2">
+                                    <button class="text-amber-300 hover:text-amber-200 text-sm font-medium expand-btn" 
+                                            data-type="proficiency" data-name="${prof}">
+                                        ⚔️ ${prof}
+                                    </button>
+                                    <div class="proficiency-details hidden mt-2 p-2 bg-gray-600 rounded text-xs"></div>
+                                </div>
+                            `).join('') : 
+                            '<p class="text-sm text-gray-400">No proficiencies listed</p>'
+                        }
                     </div>
                 </div>
                 
@@ -488,9 +658,18 @@
                 <div class="space-y-2">
                     <h3 class="font-medieval text-lg text-amber-300">Equipment</h3>
                     <div class="bg-gray-700 p-3 rounded">
-                        <ul class="text-sm space-y-1">
-                            ${equipment.map(item => `<li>• ${item}</li>`).join('')}
-                        </ul>
+                        ${equipment.length > 0 ? 
+                            equipment.map(item => `
+                                <div class="equipment-item mb-2">
+                                    <button class="text-amber-300 hover:text-amber-200 text-sm font-medium expand-btn" 
+                                            data-type="equipment" data-name="${item}">
+                                        🛡️ ${item}
+                                    </button>
+                                    <div class="equipment-details hidden mt-2 p-2 bg-gray-600 rounded text-xs"></div>
+                                </div>
+                            `).join('') : 
+                            '<p class="text-sm text-gray-400">No equipment listed</p>'
+                        }
                     </div>
                 </div>
                 
@@ -499,9 +678,15 @@
                 <div class="space-y-2">
                     <h3 class="font-medieval text-lg text-amber-300">Inventory</h3>
                     <div class="bg-gray-700 p-3 rounded">
-                        <ul class="text-sm space-y-1">
-                            ${inventory.map(item => `<li>• ${item}</li>`).join('')}
-                        </ul>
+                        ${inventory.map(item => `
+                            <div class="inventory-item mb-2">
+                                <button class="text-amber-300 hover:text-amber-200 text-sm font-medium expand-btn" 
+                                        data-type="equipment" data-name="${item}">
+                                    🎒 ${item}
+                                </button>
+                                <div class="inventory-details hidden mt-2 p-2 bg-gray-600 rounded text-xs"></div>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
                 ` : ''}
@@ -511,9 +696,15 @@
                 <div class="space-y-2">
                     <h3 class="font-medieval text-lg text-amber-300">Spells</h3>
                     <div class="bg-gray-700 p-3 rounded">
-                        <ul class="text-sm space-y-1">
-                            ${spells.map(spell => `<li>• ${spell}</li>`).join('')}
-                        </ul>
+                        ${spells.map(spell => `
+                            <div class="spell-item mb-2">
+                                <button class="text-amber-300 hover:text-amber-200 text-sm font-medium expand-btn" 
+                                        data-type="spell" data-name="${spell}">
+                                    ✨ ${spell}
+                                </button>
+                                <div class="spell-details hidden mt-2 p-2 bg-gray-600 rounded text-xs"></div>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
                 ` : ''}
@@ -529,6 +720,9 @@
                 ` : ''}
             `;
             
+            // Add event listeners for expandable items
+            addExpandableItemListeners();
+            
             modal.classList.remove('hidden');
         }
 
@@ -537,11 +731,262 @@
             document.getElementById('characterModal').classList.add('hidden');
         }
 
+        // Global mappings for skill and proficiency indexes
+        let skillNameToIndex = {};
+        let proficiencyNameToIndex = {};
+
+        // Fetch mappings on page load
+        async function fetchIndexMappings() {
+            try {
+                const [skillsRes, profsRes] = await Promise.all([
+                    fetch('/api/skills_index'),
+                    fetch('/api/proficiencies_index')
+                ]);
+                const skillsData = await skillsRes.json();
+                const profsData = await profsRes.json();
+                if (skillsData.status === 'success') skillNameToIndex = skillsData.mapping;
+                if (profsData.status === 'success') proficiencyNameToIndex = profsData.mapping;
+            } catch (e) {
+                console.error('Error fetching index mappings:', e);
+            }
+        }
+
+        // Patch: fetch mappings before initializing campaign
+        async function initializeApp() {
+            await fetchIndexMappings();
+            initializeCampaign();
+        }
+
         // Event listeners for tabs
         document.getElementById('chatTab').addEventListener('click', () => switchTab('chat'));
         document.getElementById('charactersTab').addEventListener('click', () => switchTab('characters'));
+        document.getElementById('debugTab').addEventListener('click', () => switchTab('debug')); // Add event listener for debug tab
         document.getElementById('closeModalBtn').addEventListener('click', closeModal);
         
+        // Debug console event listeners
+        document.getElementById('clearDebugBtn').addEventListener('click', clearDebugConsole);
+        document.getElementById('toggleAutoScrollBtn').addEventListener('click', toggleAutoScroll);
+        
+        // Add event listeners for expandable items
+        function addExpandableItemListeners() {
+            const expandButtons = document.querySelectorAll('.expand-btn');
+            expandButtons.forEach(button => {
+                button.addEventListener('click', async function() {
+                    const type = this.getAttribute('data-type');
+                    const name = this.getAttribute('data-name');
+                    let apiName = name;
+                    
+                    // Normalize equipment names for API lookup
+                    if (type === 'equipment') {
+                        // Remove quantity (e.g., "10 rations" -> "rations")
+                        apiName = name.replace(/^\d+\s+/, '');
+                        // Convert to singular form for common items
+                        const singularMap = {
+                            'rations': 'ration',
+                            'torches': 'torch',
+                            'arrows': 'arrow',
+                            'bolts': 'bolt',
+                            'darts': 'dart',
+                            'javelins': 'javelin',
+                            'spears': 'spear',
+                            'daggers': 'dagger',
+                            'swords': 'sword',
+                            'axes': 'axe',
+                            'hammers': 'hammer',
+                            'maces': 'mace',
+                            'flails': 'flail',
+                            'whips': 'whip',
+                            'poles': 'pole',
+                            'staves': 'staff',
+                            'bows': 'bow',
+                            'crossbows': 'crossbow',
+                            'slings': 'sling',
+                            'nets': 'net',
+                            'shields': 'shield',
+                            'armor': 'armor',
+                            'helmets': 'helmet',
+                            'boots': 'boot',
+                            'gloves': 'glove',
+                            'belts': 'belt',
+                            'cloaks': 'cloak',
+                            'rings': 'ring',
+                            'amulets': 'amulet',
+                            'potions': 'potion',
+                            'scrolls': 'scroll',
+                            'books': 'book',
+                            'maps': 'map',
+                            'keys': 'key',
+                            'coins': 'coin',
+                            'gems': 'gem',
+                            'jewels': 'jewel',
+                            'pearls': 'pearl',
+                            'diamonds': 'diamond',
+                            'rubies': 'ruby',
+                            'sapphires': 'sapphire',
+                            'emeralds': 'emerald',
+                            'gold': 'gold',
+                            'silver': 'silver',
+                            'copper': 'copper',
+                            'platinum': 'platinum'
+                        };
+                        
+                        // Convert to singular if it's in our map
+                        if (singularMap[apiName.toLowerCase()]) {
+                            apiName = singularMap[apiName.toLowerCase()];
+                        } else {
+                            // Try to convert common plural endings to singular
+                            apiName = apiName.replace(/s$/, ''); // Remove trailing 's'
+                        }
+                    }
+                    
+                    if (type === 'skill' && skillNameToIndex[name]) {
+                        apiName = skillNameToIndex[name];
+                    }
+                    if (type === 'proficiency' && proficiencyNameToIndex[name]) {
+                        apiName = proficiencyNameToIndex[name];
+                    }
+                    // Use plural endpoint for skills and proficiencies
+                    let apiType = type;
+                    if (type === 'skill') apiType = 'skills';
+                    if (type === 'proficiency') apiType = 'proficiencies';
+                    const detailsDiv = this.nextElementSibling;
+                    
+                    // Toggle visibility
+                    if (detailsDiv.classList.contains('hidden')) {
+                        // Show loading state
+                        detailsDiv.innerHTML = '<p class="text-gray-400">Loading...</p>';
+                        detailsDiv.classList.remove('hidden');
+                        
+                        try {
+                            // Debug logging
+                            console.log(`Fetching ${type} details for: ${name} (normalized: ${apiName})`);
+                            const url = `/api/${apiType}/${encodeURIComponent(apiName)}`;
+                            console.log(`API URL: ${url}`);
+                            
+                            // Fetch details from API
+                            const response = await fetch(url);
+                            console.log(`Response status: ${response.status}`);
+                            
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                            }
+                            
+                            const data = await response.json();
+                            console.log(`Response data:`, data);
+                            
+                            if (data.status === 'success') {
+                                detailsDiv.innerHTML = formatItemDetails(data.details, type);
+                            } else {
+                                detailsDiv.innerHTML = `<p class="text-red-400">Error: ${data.message}</p>`;
+                            }
+                        } catch (error) {
+                            console.error('Error fetching details:', error);
+                            detailsDiv.innerHTML = `<p class="text-red-400">Error loading details: ${error.message}</p>`;
+                        }
+                    } else {
+                        // Hide details
+                        detailsDiv.classList.add('hidden');
+                    }
+                });
+            });
+        }
+
+        // Format item details for display
+        function formatItemDetails(details, type) {
+            if (details.error) {
+                return `<p class="text-red-400">${details.error}</p>`;
+            }
+            
+            let html = '';
+            
+            switch (type) {
+                case 'equipment':
+                    html = formatEquipmentDetails(details);
+                    break;
+                case 'spell':
+                    html = formatSpellDetails(details);
+                    break;
+                case 'skill':
+                    html = formatSkillDetails(details);
+                    break;
+                case 'proficiency':
+                    html = formatProficiencyDetails(details);
+                    break;
+                default:
+                    html = `<p class="text-gray-400">No details available</p>`;
+            }
+            
+            return html;
+        }
+
+        // Format equipment details
+        function formatEquipmentDetails(details) {
+            let html = '';
+            
+            if (details.name) html += `<p><strong>Name:</strong> ${details.name}</p>`;
+            if (details.equipment_category) html += `<p><strong>Category:</strong> ${details.equipment_category.name}</p>`;
+            if (details.cost) html += `<p><strong>Cost:</strong> ${details.cost.quantity} ${details.cost.unit}</p>`;
+            if (details.weight) html += `<p><strong>Weight:</strong> ${details.weight} lbs</p>`;
+            if (details.desc && details.desc.length > 0) {
+                html += `<p><strong>Description:</strong></p><p>${details.desc.join(' ')}</p>`;
+            }
+            
+            return html || '<p class="text-gray-400">No details available</p>';
+        }
+
+        // Format spell details
+        function formatSpellDetails(details) {
+            let html = '';
+            
+            if (details.name) html += `<p><strong>Name:</strong> ${details.name}</p>`;
+            if (details.level) html += `<p><strong>Level:</strong> ${details.level}</p>`;
+            if (details.school) html += `<p><strong>School:</strong> ${details.school.name}</p>`;
+            if (details.casting_time) html += `<p><strong>Casting Time:</strong> ${details.casting_time}</p>`;
+            if (details.range) html += `<p><strong>Range:</strong> ${details.range}</p>`;
+            if (details.components) html += `<p><strong>Components:</strong> ${details.components.join(', ')}</p>`;
+            if (details.duration) html += `<p><strong>Duration:</strong> ${details.duration}</p>`;
+            if (details.desc && details.desc.length > 0) {
+                html += `<p><strong>Description:</strong></p><p>${details.desc.join(' ')}</p>`;
+            }
+            if (details.higher_level && details.higher_level.length > 0) {
+                html += `<p><strong>At Higher Levels:</strong></p><p>${details.higher_level.join(' ')}</p>`;
+            }
+            
+            return html || '<p class="text-gray-400">No details available</p>';
+        }
+
+        // Format skill details
+        function formatSkillDetails(details) {
+            let html = '';
+            
+            if (details.name) html += `<p><strong>Name:</strong> ${details.name}</p>`;
+            if (details.desc && details.desc.length > 0) {
+                html += `<p><strong>Description:</strong></p><p>${details.desc.join(' ')}</p>`;
+            }
+            if (details.ability_score) html += `<p><strong>Ability Score:</strong> ${details.ability_score.name}</p>`;
+            
+            return html || '<p class="text-gray-400">No details available</p>';
+        }
+
+        // Format proficiency details
+        function formatProficiencyDetails(details) {
+            let html = '';
+            
+            if (details.name) html += `<p><strong>Name:</strong> ${details.name}</p>`;
+            if (details.type) html += `<p><strong>Type:</strong> ${details.type}</p>`;
+            if (details.classes && details.classes.length > 0) {
+                html += `<p><strong>Classes:</strong> ${details.classes.map(c => c.name).join(', ')}</p>`;
+            }
+            if (details.races && details.races.length > 0) {
+                html += `<p><strong>Races:</strong> ${details.races.map(r => r.name).join(', ')}</p>`;
+            }
+            if (details.desc && details.desc.length > 0) {
+                html += `<p><strong>Description:</strong></p><p>${details.desc.join(' ')}</p>`;
+            }
+            
+            return html || '<p class="text-gray-400">No details available</p>';
+        }
+
         // Close modal when clicking outside
         document.getElementById('characterModal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -550,7 +995,8 @@
         });
 
         // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', initializeCampaign);
+        // document.addEventListener('DOMContentLoaded', initializeCampaign);
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html> 
