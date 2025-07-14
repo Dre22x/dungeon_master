@@ -171,5 +171,7 @@ character_creation_agent = LlmAgent(
            get_all_magic_items,
            get_all_magic_schools,
            finalize_character,
+           create_character_data,
+           save_character_to_campaign,
           ]
 )

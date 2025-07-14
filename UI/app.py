@@ -5,9 +5,24 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from firestore import db_utils
 from agents.agent import root_agent
+import datetime
+
+def make_json_serializable(obj):
+    if isinstance(obj, dict):
+        return {k: make_json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [make_json_serializable(v) for v in obj]
+    elif isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    else:
+        return obj
 
 # Initialize the Flask application
 app = Flask(__name__, template_folder='.')
+
+# Global session service for persistent sessions
+from google.adk.sessions import InMemorySessionService
+session_service = InMemorySessionService()
 
 # ==============================================================================
 #  AGENT & DATABASE LOGIC (Placeholders)
@@ -37,16 +52,21 @@ def index():
     """
     return render_template('index.html')
 
+@app.route('/campaign')
+def campaign():
+    """
+    This route serves the campaign interface page.
+    """
+    return render_template('campaign.html')
+
 async def initialize_agent_for_new_campaign(campaign_id: str):
     """
     Initializes the GM agent for a new campaign.
     """
-    from google.adk.sessions import InMemorySessionService
     from google.adk.runners import Runner
     from google.genai import types
     
-    # Set up the session and runner
-    session_service = InMemorySessionService()
+    # Set up the session and runner using global session service
     session = await session_service.create_session(
         app_name="dungeon_master",
         user_id="user_1",
@@ -118,16 +138,32 @@ def new_campaign():
             "adk_url": f"http://localhost:8000/dev-ui/?app=agents&session=session_{campaign_id}"
         })
 
+@app.route('/campaign/<string:campaign_id>/characters', methods=['GET'])
+def get_campaign_characters(campaign_id):
+    """
+    API endpoint to get all characters for a specific campaign.
+    """
+    try:
+        characters = db_utils.list_characters_in_campaign(campaign_id)
+        if 'error' in characters:
+            return jsonify({"status": "error", "message": characters['error']}), 404
+        
+        return jsonify({
+            "status": "success",
+            "characters": characters.get('characters', [])
+        })
+    except Exception as e:
+        print(f"Error getting characters for campaign {campaign_id}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 async def initialize_agent_with_campaign(campaign_id: str, campaign_data: dict):
     """
     Initializes the GM agent with the loaded campaign data.
     """
-    from google.adk.sessions import InMemorySessionService
     from google.adk.runners import Runner
     from google.genai import types
     
-    # Set up the session and runner
-    session_service = InMemorySessionService()
+    # Set up the session and runner using global session service
     session = await session_service.create_session(
         app_name="dungeon_master",
         user_id="user_1",
@@ -144,6 +180,25 @@ async def initialize_agent_with_campaign(campaign_id: str, campaign_data: dict):
     import json
     formatted_campaign_data = json.dumps(campaign_data, indent=2)
     
+    # Create a more detailed campaign summary
+    characters_summary = ""
+    if 'characters' in campaign_data and campaign_data['characters']:
+        characters_summary = "\nCHARACTERS:\n"
+        for char in campaign_data['characters']:
+            characters_summary += f"- {char.get('name', 'Unknown')} ({char.get('race', 'Unknown')} {char.get('class', 'Unknown')} Level {char.get('level', 1)})\n"
+    
+    npcs_summary = ""
+    if 'npcs' in campaign_data and campaign_data['npcs']:
+        npcs_summary = "\nIMPORTANT NPCS:\n"
+        for npc in campaign_data['npcs']:
+            npcs_summary += f"- {npc.get('name', 'Unknown')} ({npc.get('role', 'Unknown')}): {npc.get('description', 'No description')}\n"
+    
+    quests_summary = ""
+    if 'quests' in campaign_data and campaign_data['quests']:
+        quests_summary = "\nACTIVE QUESTS:\n"
+        for quest in campaign_data['quests']:
+            quests_summary += f"- {quest.get('name', 'Unknown Quest')}: {quest.get('description', 'No description')}\n"
+    
     campaign_summary = f"""
 CAMPAIGN CONTEXT - Campaign ID: {campaign_id}
 
@@ -159,9 +214,15 @@ The campaign data above contains all the current state including:
 - Campaign notes and story context
 - Previous story events and decisions
 
+{characters_summary}
+{npcs_summary}
+{quests_summary}
+
 Your task is to continue this campaign from where it left off. 
 Study the campaign data carefully and be ready to continue the story seamlessly.
 Do NOT start a new campaign or character creation process.
+
+IMPORTANT: Provide a brief summary of the campaign so far as your first response to help the player understand where they left off.
 """
 
     content = types.Content(
@@ -191,6 +252,7 @@ def load_campaign(campaign_id):
     import asyncio
     
     campaign_data = load_campaign_from_db(campaign_id)
+    campaign_data = make_json_serializable(campaign_data)
     if not campaign_data or 'error' in campaign_data:
         # Return a 404 Not Found error if the campaign doesn't exist
         return jsonify({"status": "error", "message": "Campaign not found"}), 404
@@ -219,6 +281,134 @@ def load_campaign(campaign_id):
             "agent_response": "Campaign loaded but agent initialization failed",
             "adk_url": f"http://localhost:8000/dev-ui/?app=agents&session=session_{campaign_id}"
         })
+
+@app.route('/initialize-campaign', methods=['POST'])
+def initialize_campaign():
+    """
+    API endpoint to initialize a campaign for the chat interface.
+    """
+    import asyncio
+    from flask import request
+    
+    data = request.get_json()
+    campaign_id = data.get('campaign_id')
+    
+    if not campaign_id:
+        return jsonify({"status": "error", "message": "Campaign ID is required"}), 400
+    
+    try:
+        # Check if campaign exists
+        campaign_data = load_campaign_from_db(campaign_id)
+        campaign_data = make_json_serializable(campaign_data)
+        
+        if not campaign_data or 'error' in campaign_data:
+            # Campaign doesn't exist, create a new one
+            initialize_new_campaign_in_db()
+            campaign_data = load_campaign_from_db(campaign_id)
+            campaign_data = make_json_serializable(campaign_data)
+        
+        # Initialize the agent with campaign data
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Check if this is an existing campaign with content
+        is_existing_campaign = (
+            campaign_data and 
+            not 'error' in campaign_data and
+            (
+                ('characters' in campaign_data and len(campaign_data['characters']) > 0) or
+                ('context' in campaign_data and campaign_data['context']) or
+                ('notes' in campaign_data and len(campaign_data['notes']) > 0)
+            )
+        )
+        
+        if is_existing_campaign:
+            # Existing campaign - load it with context
+            print(f"[App] Loading existing campaign {campaign_id} with data")
+            agent_response = loop.run_until_complete(initialize_agent_with_campaign(campaign_id, campaign_data))
+        else:
+            # New campaign - start character creation
+            print(f"[App] Starting new campaign {campaign_id}")
+            agent_response = loop.run_until_complete(initialize_agent_for_new_campaign(campaign_id))
+        
+        loop.close()
+        
+        return jsonify({
+            "status": "success",
+            "campaign_id": campaign_id,
+            "agent_response": agent_response
+        })
+        
+    except Exception as e:
+        print(f"Error initializing campaign: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """
+    API endpoint to handle chat messages with the agent.
+    """
+    import asyncio
+    from flask import request
+    from google.adk.sessions import InMemorySessionService
+    from google.adk.runners import Runner
+    from google.genai import types
+    
+    data = request.get_json()
+    campaign_id = data.get('campaign_id')
+    message = data.get('message')
+    
+    if not campaign_id or not message:
+        return jsonify({"status": "error", "message": "Campaign ID and message are required"}), 400
+    
+    try:
+        # Set up the runner using global session service
+        runner = Runner(
+            agent=root_agent,
+            app_name="dungeon_master",
+            session_service=session_service
+        )
+
+        # Create the message content
+        content = types.Content(
+            role='user', 
+            parts=[types.Part(text=message)]
+        )
+
+        # Run the agent workflow
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        agent_response = ""
+        
+        async def run_agent():
+            async for event in runner.run_async(
+                user_id="user_1", 
+                session_id=f"session_{campaign_id}", 
+                new_message=content
+            ):
+                if event.is_final_response():
+                    if event.content and event.content.parts:
+                        return event.content.parts[0].text
+            return ""
+        
+        agent_response = loop.run_until_complete(run_agent())
+        loop.close()
+        
+        return jsonify({
+            "status": "success",
+            "agent_response": agent_response
+        })
+        
+    except Exception as e:
+        print(f"Error in chat: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 # ==============================================================================
 #  MAIN EXECUTION BLOCK

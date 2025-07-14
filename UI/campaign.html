@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Dungeon Master - Campaign</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Lora:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Lora', serif;
+            background-color: #1a1a1a;
+            background-image: url('https://www.transparenttextures.com/patterns/crissxcross.png'), linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8));
+            color: #e0e0e0;
+        }
+        .font-medieval {
+            font-family: 'MedievalSharp', cursive;
+        }
+        .main-container {
+            border: 1px solid #4a3a2a;
+            background-color: rgba(26, 26, 26, 0.85);
+            box-shadow: 0 0 30px rgba(255, 199, 0, 0.1);
+        }
+        .btn-primary {
+            font-family: 'MedievalSharp', cursive;
+            background-color: #8a6d3b;
+            border: 1px solid #7a5d2b;
+            color: #f5f5f5;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .btn-primary:hover {
+            background-color: #a08252;
+            box-shadow: 0 0 15px rgba(255, 199, 0, 0.3);
+            transform: translateY(-2px);
+        }
+        .input-field {
+            background-color: #2a2a2a;
+            border: 1px solid #4a3a2a;
+            color: #e0e0e0;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #8a6d3b;
+            box-shadow: 0 0 10px rgba(138, 109, 59, 0.5);
+        }
+        .chat-container {
+            height: 60vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #4a3a2a #2a2a2a;
+        }
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .chat-container::-webkit-scrollbar-track {
+            background: #2a2a2a;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #4a3a2a;
+            border-radius: 4px;
+        }
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: #8a6d3b;
+        }
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            max-width: 80%;
+        }
+        .user-message {
+            background-color: #4a3a2a;
+            border-left: 4px solid #8a6d3b;
+            margin-left: auto;
+        }
+        .agent-message {
+            background-color: #2a2a2a;
+            border-left: 4px solid #d4af37;
+        }
+        .system-message {
+            background-color: #1a1a1a;
+            border-left: 4px solid #666;
+            font-style: italic;
+            text-align: center;
+            max-width: 100%;
+        }
+        .typing-indicator {
+            display: none;
+            color: #d4af37;
+            font-style: italic;
+        }
+        .campaign-info {
+            background-color: rgba(74, 58, 42, 0.3);
+            border: 1px solid #4a3a2a;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-6">
+            <h1 class="font-medieval text-4xl md:text-5xl text-amber-300">Dungeon Master</h1>
+            <p class="text-lg text-gray-400 mt-2">Campaign Session</p>
+        </header>
+
+        <!-- Campaign Info -->
+        <div id="campaignInfo" class="campaign-info">
+            <h3 class="font-medieval text-xl text-amber-300 mb-2">Campaign ID: <span id="campaignId">Loading...</span></h3>
+            <p id="campaignStatus" class="text-gray-400">Initializing...</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="flex mb-4">
+            <button id="chatTab" class="btn-primary px-6 py-3 text-lg rounded-l-md border-r border-amber-600">
+                Chat
+            </button>
+            <button id="charactersTab" class="btn-primary px-6 py-3 text-lg rounded-r-md opacity-75 hover:opacity-100">
+                Characters
+            </button>
+        </div>
+
+        <!-- Chat Tab Content -->
+        <div id="chatTabContent" class="main-container rounded-lg p-6">
+            <!-- Chat Messages -->
+            <div id="chatContainer" class="chat-container mb-4 p-4">
+                <div class="message system-message">
+                    Welcome to your D&D campaign! The Dungeon Master is ready to guide your adventure.
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div id="typingIndicator" class="typing-indicator mb-4">
+                The Dungeon Master is thinking...
+            </div>
+
+            <!-- Input Area -->
+            <div class="flex gap-4">
+                <input 
+                    id="messageInput" 
+                    type="text" 
+                    placeholder="Type your message here..." 
+                    class="input-field flex-grow px-4 py-3 rounded-md text-lg focus:ring-2 focus:ring-amber-400"
+                    disabled
+                >
+                <button 
+                    id="sendButton" 
+                    class="btn-primary px-6 py-3 text-lg rounded-md"
+                    disabled
+                >
+                    Send
+                </button>
+            </div>
+        </div>
+
+        <!-- Characters Tab Content -->
+        <div id="charactersTabContent" class="main-container rounded-lg p-6 hidden">
+            <h3 class="font-medieval text-2xl text-amber-300 mb-4">Campaign Characters</h3>
+            <div id="charactersList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Characters will be loaded here -->
+            </div>
+            <div id="noCharactersMessage" class="text-center text-gray-400 py-8 hidden">
+                <p class="text-lg">No characters found in this campaign.</p>
+                <p class="text-sm mt-2">Characters will appear here once they are created.</p>
+            </div>
+        </div>
+
+        <!-- Character Detail Modal -->
+        <div id="characterModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="bg-gray-800 border border-amber-600 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 id="modalCharacterName" class="font-medieval text-2xl text-amber-300"></h2>
+                            <button id="closeModalBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                        </div>
+                        <div id="characterDetails" class="space-y-4">
+                            <!-- Character details will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back to Menu Button -->
+        <div class="text-center mt-6">
+            <button id="backToMenuBtn" class="btn-primary px-8 py-3 text-xl rounded-md">
+                Back to Menu
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentCampaignId = null;
+        let isInitialized = false;
+
+        // Get campaign ID from URL parameters
+        function getCampaignIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('campaign_id');
+        }
+
+        // Initialize the campaign
+        async function initializeCampaign() {
+            const campaignId = getCampaignIdFromUrl();
+            if (!campaignId) {
+                showMessage('Error: No campaign ID provided', 'system');
+                return;
+            }
+
+            currentCampaignId = campaignId;
+            document.getElementById('campaignId').textContent = campaignId;
+            document.getElementById('campaignStatus').textContent = 'Initializing...';
+
+            try {
+                // Initialize the agent for this campaign
+                const response = await fetch('/initialize-campaign', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ campaign_id: campaignId })
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    document.getElementById('campaignStatus').textContent = 'Ready';
+                    isInitialized = true;
+                    enableInput();
+                    
+                    if (data.agent_response) {
+                        showMessage(data.agent_response, 'agent');
+                    }
+                } else {
+                    showMessage('Error initializing campaign: ' + data.message, 'system');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error initializing campaign', 'system');
+            }
+        }
+
+        // Convert markdown to HTML
+        function markdownToHtml(text) {
+            return text
+                // Convert **bold** to <strong>bold</strong>
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Convert *italic* to <em>italic</em>
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Convert line breaks to <br>
+                .replace(/\n/g, '<br>');
+        }
+
+        // Show a message in the chat
+        function showMessage(text, type) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            
+            // Convert markdown to HTML for agent messages, use plain text for user messages
+            if (type === 'agent') {
+                messageDiv.innerHTML = markdownToHtml(text);
+            } else {
+                messageDiv.textContent = text;
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Enable input after initialization
+        function enableInput() {
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendButton').disabled = false;
+            document.getElementById('messageInput').focus();
+        }
+
+        // Send message to agent
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || !isInitialized) return;
+
+            // Show user message
+            showMessage(message, 'user');
+            input.value = '';
+
+            // Show typing indicator
+            const typingIndicator = document.getElementById('typingIndicator');
+            typingIndicator.style.display = 'block';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        campaign_id: currentCampaignId,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Hide typing indicator
+                typingIndicator.style.display = 'none';
+
+                if (data.status === 'success') {
+                    showMessage(data.agent_response, 'agent');
+                } else {
+                    showMessage('Error: ' + data.message, 'system');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                typingIndicator.style.display = 'none';
+                showMessage('Error sending message', 'system');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        document.getElementById('backToMenuBtn').addEventListener('click', function() {
+            window.location.href = '/';
+        });
+
+        // Tab functionality
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.getElementById('chatTabContent').classList.add('hidden');
+            document.getElementById('charactersTabContent').classList.add('hidden');
+            
+            // Remove active state from all tabs
+            document.getElementById('chatTab').classList.remove('opacity-100');
+            document.getElementById('chatTab').classList.add('opacity-75');
+            document.getElementById('charactersTab').classList.remove('opacity-100');
+            document.getElementById('charactersTab').classList.add('opacity-75');
+            
+            // Show selected tab content
+            document.getElementById(tabName + 'TabContent').classList.remove('hidden');
+            
+            // Add active state to selected tab
+            document.getElementById(tabName + 'Tab').classList.remove('opacity-75');
+            document.getElementById(tabName + 'Tab').classList.add('opacity-100');
+            
+            // Load characters if switching to characters tab
+            if (tabName === 'characters') {
+                loadCharacters();
+            }
+        }
+
+        // Load characters for the campaign
+        async function loadCharacters() {
+            if (!currentCampaignId) return;
+            
+            try {
+                const response = await fetch(`/campaign/${currentCampaignId}/characters`);
+                const data = await response.json();
+                
+                const charactersList = document.getElementById('charactersList');
+                const noCharactersMessage = document.getElementById('noCharactersMessage');
+                
+                if (data.status === 'success') {
+                    const characters = data.characters;
+                    
+                    if (characters.length === 0) {
+                        charactersList.innerHTML = '';
+                        noCharactersMessage.classList.remove('hidden');
+                    } else {
+                        noCharactersMessage.classList.add('hidden');
+                        charactersList.innerHTML = '';
+                        
+                        characters.forEach(character => {
+                            const characterCard = createCharacterCard(character);
+                            charactersList.appendChild(characterCard);
+                        });
+                    }
+                } else {
+                    console.error('Error loading characters:', data.message);
+                    showMessage('Error loading characters: ' + data.message, 'system');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error loading characters', 'system');
+            }
+        }
+
+        // Create a character card
+        function createCharacterCard(character) {
+            const card = document.createElement('div');
+            card.className = 'bg-gray-700 border border-amber-600 rounded-lg p-4 hover:bg-gray-600 cursor-pointer transition-colors';
+            
+            const abilityScores = character.ability_scores || {};
+            const str = abilityScores.Strength || abilityScores.STR || 10;
+            const dex = abilityScores.Dexterity || abilityScores.DEX || 10;
+            const con = abilityScores.Constitution || abilityScores.CON || 10;
+            
+            card.innerHTML = `
+                <h4 class="font-medieval text-lg text-amber-300 mb-2">${character.name}</h4>
+                <p class="text-gray-300 text-sm mb-2">${character.race} ${character.class} (Level ${character.level})</p>
+                <p class="text-gray-400 text-xs mb-2">${character.background} • ${character.alignment}</p>
+                <div class="flex justify-between text-xs text-gray-400">
+                    <span>STR: ${str}</span>
+                    <span>DEX: ${dex}</span>
+                    <span>CON: ${con}</span>
+                </div>
+            `;
+            
+            card.addEventListener('click', () => showCharacterDetails(character));
+            return card;
+        }
+
+        // Show character details in modal
+        function showCharacterDetails(character) {
+            const modal = document.getElementById('characterModal');
+            const modalName = document.getElementById('modalCharacterName');
+            const characterDetails = document.getElementById('characterDetails');
+            
+            modalName.textContent = character.name;
+            
+            const abilityScores = character.ability_scores || {};
+            const skills = character.skills || [];
+            const proficiencies = character.proficiencies || [];
+            const equipment = character.equipment || [];
+            const inventory = character.inventory || [];
+            const spells = character.spells || [];
+            
+            characterDetails.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Basic Info -->
+                    <div class="space-y-2">
+                        <h3 class="font-medieval text-lg text-amber-300">Basic Information</h3>
+                        <div class="bg-gray-700 p-3 rounded">
+                            <p><strong>Race:</strong> ${character.race}</p>
+                            <p><strong>Class:</strong> ${character.class} (Level ${character.level})</p>
+                            <p><strong>Background:</strong> ${character.background}</p>
+                            <p><strong>Alignment:</strong> ${character.alignment}</p>
+                            <p><strong>Experience:</strong> ${character.experience || 0} XP</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Ability Scores -->
+                    <div class="space-y-2">
+                        <h3 class="font-medieval text-lg text-amber-300">Ability Scores</h3>
+                        <div class="bg-gray-700 p-3 rounded">
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <p><strong>STR:</strong> ${abilityScores.Strength || abilityScores.STR || 10}</p>
+                                <p><strong>DEX:</strong> ${abilityScores.Dexterity || abilityScores.DEX || 10}</p>
+                                <p><strong>CON:</strong> ${abilityScores.Constitution || abilityScores.CON || 10}</p>
+                                <p><strong>INT:</strong> ${abilityScores.Intelligence || abilityScores.INT || 10}</p>
+                                <p><strong>WIS:</strong> ${abilityScores.Wisdom || abilityScores.WIS || 10}</p>
+                                <p><strong>CHA:</strong> ${abilityScores.Charisma || abilityScores.CHA || 10}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Skills -->
+                <div class="space-y-2">
+                    <h3 class="font-medieval text-lg text-amber-300">Skills</h3>
+                    <div class="bg-gray-700 p-3 rounded">
+                        <p class="text-sm">${skills.length > 0 ? skills.join(', ') : 'No skills listed'}</p>
+                    </div>
+                </div>
+                
+                <!-- Proficiencies -->
+                <div class="space-y-2">
+                    <h3 class="font-medieval text-lg text-amber-300">Proficiencies</h3>
+                    <div class="bg-gray-700 p-3 rounded">
+                        <p class="text-sm">${proficiencies.length > 0 ? proficiencies.join(', ') : 'No proficiencies listed'}</p>
+                    </div>
+                </div>
+                
+                <!-- Equipment -->
+                <div class="space-y-2">
+                    <h3 class="font-medieval text-lg text-amber-300">Equipment</h3>
+                    <div class="bg-gray-700 p-3 rounded">
+                        <ul class="text-sm space-y-1">
+                            ${equipment.map(item => `<li>• ${item}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Inventory -->
+                ${inventory.length > 0 ? `
+                <div class="space-y-2">
+                    <h3 class="font-medieval text-lg text-amber-300">Inventory</h3>
+                    <div class="bg-gray-700 p-3 rounded">
+                        <ul class="text-sm space-y-1">
+                            ${inventory.map(item => `<li>• ${item}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <!-- Spells -->
+                ${spells.length > 0 ? `
+                <div class="space-y-2">
+                    <h3 class="font-medieval text-lg text-amber-300">Spells</h3>
+                    <div class="bg-gray-700 p-3 rounded">
+                        <ul class="text-sm space-y-1">
+                            ${spells.map(spell => `<li>• ${spell}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <!-- Notes -->
+                ${character.notes ? `
+                <div class="space-y-2">
+                    <h3 class="font-medieval text-lg text-amber-300">Notes</h3>
+                    <div class="bg-gray-700 p-3 rounded">
+                        <p class="text-sm">${character.notes}</p>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            modal.classList.remove('hidden');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('characterModal').classList.add('hidden');
+        }
+
+        // Event listeners for tabs
+        document.getElementById('chatTab').addEventListener('click', () => switchTab('chat'));
+        document.getElementById('charactersTab').addEventListener('click', () => switchTab('characters'));
+        document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+        
+        // Close modal when clicking outside
+        document.getElementById('characterModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeCampaign);
+    </script>
+</body>
+</html> 

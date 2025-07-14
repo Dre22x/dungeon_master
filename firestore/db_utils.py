@@ -100,7 +100,25 @@ def load_campaign(campaign_id: str) -> dict:
         
         if campaign_doc.exists:
             campaign_data = campaign_doc.to_dict()
-            print(f"[DatabaseManager] Campaign '{campaign_data.get('name', campaign_id)}' loaded successfully.")
+            
+            # Load all sub-collections
+            sub_collections = ['characters', 'npcs', 'monsters', 'locations', 'quests', 'notes']
+            
+            for sub_collection in sub_collections:
+                try:
+                    docs = campaign_ref.collection(sub_collection).stream()
+                    collection_data = []
+                    for doc in docs:
+                        if doc.id != '_init':  # Skip the initialization document
+                            doc_data = doc.to_dict()
+                            doc_data['_id'] = doc.id
+                            collection_data.append(doc_data)
+                    campaign_data[sub_collection] = collection_data
+                except Exception as e:
+                    print(f"[DatabaseManager] Warning: Could not load {sub_collection} for campaign {campaign_id}: {e}")
+                    campaign_data[sub_collection] = []
+            
+            print(f"[DatabaseManager] Campaign '{campaign_data.get('name', campaign_id)}' loaded successfully with all sub-collections.")
             return campaign_data
         else:
             return {"error": f"Campaign with ID '{campaign_id}' not found."}

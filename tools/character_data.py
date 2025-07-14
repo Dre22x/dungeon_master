@@ -125,3 +125,38 @@ def finalize_character(
     print(final_sheet)
 
     return f"Character sheet for {name} has been successfully generated and printed."
+
+def create_character_data(
+    name: str, 
+    race: str, 
+    char_class: str, 
+    level: int,
+    background: str,
+    alignment: str,
+    ability_scores: dict, 
+    skills: list[str], 
+    proficiencies: list[str],
+    equipment: list[str],
+    ) -> dict:
+    """
+    Creates a character data dictionary suitable for saving to the campaign database.
+    This is the data format expected by save_character_to_campaign.
+    """
+    character_data = {
+        'name': name,
+        'race': race,
+        'class': char_class,
+        'level': level,
+        'background': background,
+        'alignment': alignment,
+        'ability_scores': ability_scores,
+        'skills': skills,
+        'proficiencies': proficiencies,
+        'equipment': equipment,
+        'experience': 0,  # Starting experience
+        'inventory': [],  # Empty inventory to start
+        'spells': [],     # Empty spells list to start
+        'notes': f"Character created with {background} background. Level {level} {race} {char_class}."
+    }
+    
+    return character_data

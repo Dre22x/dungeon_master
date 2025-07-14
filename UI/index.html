@@ -102,12 +102,10 @@
                 .then(response => response.json())
                 .then(data => {
                     messageArea.textContent = `New campaign created! ID: ${data.campaign_id}`;
-                    // Redirect to the ADK web interface
-                    if (data.adk_url) {
-                        setTimeout(() => {
-                            window.location.href = data.adk_url;
-                        }, 1500); // Give user time to see the success message
-                    }
+                    // Redirect to the campaign interface
+                    setTimeout(() => {
+                        window.location.href = `/campaign?campaign_id=${data.campaign_id}`;
+                    }, 1500); // Give user time to see the success message
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -133,12 +131,10 @@
                 })
                 .then(data => {
                     messageArea.textContent = `Successfully loaded campaign: ${data.campaign_id}`;
-                    // Redirect to the ADK web interface with campaign context
-                    if (data.adk_url) {
-                        setTimeout(() => {
-                            window.location.href = data.adk_url;
-                        }, 1500); // Give user time to see the success message
-                    }
+                    // Redirect to the campaign interface
+                    setTimeout(() => {
+                        window.location.href = `/campaign?campaign_id=${data.campaign_id}`;
+                    }, 1500); // Give user time to see the success message
                 })
                 .catch(error => {
                     console.error('Error:', error);

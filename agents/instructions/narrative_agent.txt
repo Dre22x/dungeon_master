@@ -41,6 +41,7 @@ When the story leads to NPC interaction:
 2. **Save this NPC profile to the campaign database** using the save_npc_to_campaign tool
 3. **Continue narrating the scene** while the NPC Agent handles dialogue
 4. **Coordinate with the NPC Agent** to maintain story flow and consistency
+5. **Save campaign context** using the save_campaign tool to record the NPC interaction and story progression
 
 ## WRITING STYLE
 
