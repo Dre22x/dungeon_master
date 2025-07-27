@@ -6,7 +6,7 @@ This test will check that agents can load their model names from the YAML file.
 
 import sys
 import os
-sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from agents.config_loader import load_agent_config, get_model_for_agent, get_all_agent_models
 

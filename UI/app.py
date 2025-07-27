@@ -19,7 +19,13 @@ def make_json_serializable(obj):
     elif isinstance(obj, datetime.datetime):
         return obj.isoformat()
     else:
-        return obj
+        return str(obj)  # Convert any other objects to string
+
+def get_adk_web_url(campaign_id: str) -> str:
+    """
+    Generate ADK web URL that automatically switches to the campaign session.
+    """
+    return f"http://localhost:8000/dev-ui/?app=dungeon_master&session=session_{campaign_id}"
 
 # Initialize the Flask application
 app = Flask(__name__, template_folder='.')
@@ -28,25 +34,25 @@ app = Flask(__name__, template_folder='.')
 sock = Sock(app)
 
 # Global session service for persistent sessions
-from google.adk.sessions import InMemorySessionService
-session_service = InMemorySessionService()
+from google.adk.sessions import FirestoreSessionService
+session_service = FirestoreSessionService()
 
 # Global debug message queue for streaming debug output
 debug_messages = queue.Queue()
 debug_subscribers = set()
 
 # ==============================================================================
-#  AGENT & DATABASE LOGIC (Placeholders)
-#  This is where you would import and call your existing Python agent code.
+#  ENHANCED DEBUG SYSTEM
 # ==============================================================================
 
-def send_debug_message(message, message_type='info', campaign_id=None):
-    """Send a debug message to all connected clients."""
+def send_debug_message(message, message_type='info', campaign_id=None, data=None):
+    """Send a debug message to all connected clients with enhanced data support."""
     debug_data = {
         'message': message,
         'type': message_type,
         'campaign_id': campaign_id,
-        'timestamp': datetime.datetime.now().isoformat()
+        'timestamp': datetime.datetime.now().isoformat(),
+        'data': make_json_serializable(data) if data else None
     }
     debug_messages.put(debug_data)
     
@@ -57,6 +63,107 @@ def send_debug_message(message, message_type='info', campaign_id=None):
         except Exception as e:
             print(f"Error sending debug message: {e}")
             debug_subscribers.discard(ws)
+
+def log_agent_event(event, campaign_id):
+    """Enhanced logging for agent events with detailed information."""
+    try:
+        # Log agent calls
+        if hasattr(event, 'agent') and event.agent:
+            agent_info = {
+                'agent_name': event.agent.name,
+                'agent_description': event.agent.description if hasattr(event.agent, 'description') else 'No description',
+                'timestamp': datetime.datetime.now().isoformat()
+            }
+            send_debug_message(
+                f"🤖 AGENT ACTIVATED: {event.agent.name}", 
+                'agent_activated', 
+                campaign_id, 
+                agent_info
+            )
+        
+        # Log agent escalations/transfers
+        if hasattr(event, 'actions') and event.actions:
+            if hasattr(event.actions, 'escalate') and event.actions.escalate:
+                escalation_info = {
+                    'from_agent': getattr(event.agent, 'name', 'Unknown') if hasattr(event, 'agent') else 'Unknown',
+                    'to_agent': event.actions.escalate.agent_name,
+                    'reason': getattr(event.actions.escalate, 'reason', 'No reason provided'),
+                    'timestamp': datetime.datetime.now().isoformat()
+                }
+                send_debug_message(
+                    f"🔄 AGENT TRANSFER: {escalation_info['from_agent']} → {escalation_info['to_agent']}", 
+                    'agent_transfer', 
+                    campaign_id, 
+                    escalation_info
+                )
+        
+        # Log tool calls
+        if hasattr(event, 'actions') and event.actions:
+            if hasattr(event.actions, 'tool_calls') and event.actions.tool_calls:
+                for tool_call in event.actions.tool_calls:
+                    tool_info = {
+                        'agent_name': getattr(event.agent, 'name', 'Unknown') if hasattr(event, 'agent') else 'Unknown',
+                        'tool_name': tool_call.name,
+                        'tool_args': make_json_serializable(tool_call.args) if hasattr(tool_call, 'args') else {},
+                        'timestamp': datetime.datetime.now().isoformat()
+                    }
+                    send_debug_message(
+                        f"🔧 TOOL CALL: {tool_call.name} by {tool_info['agent_name']}", 
+                        'tool_call', 
+                        campaign_id, 
+                        tool_info
+                    )
+        
+        # Log tool results
+        if hasattr(event, 'actions') and event.actions:
+            if hasattr(event.actions, 'tool_results') and event.actions.tool_results:
+                for tool_result in event.actions.tool_results:
+                    result_info = {
+                        'tool_name': tool_result.name if hasattr(tool_result, 'name') else 'Unknown',
+                        'result': make_json_serializable(tool_result.result) if hasattr(tool_result, 'result') else None,
+                        'error': make_json_serializable(tool_result.error) if hasattr(tool_result, 'error') else None,
+                        'timestamp': datetime.datetime.now().isoformat()
+                    }
+                    status = "✅ SUCCESS" if not result_info['error'] else "❌ ERROR"
+                    send_debug_message(
+                        f"{status} TOOL RESULT: {result_info['tool_name']}", 
+                        'tool_result', 
+                        campaign_id, 
+                        result_info
+                    )
+        
+        # Log final responses
+        if event.is_final_response():
+            response_info = {
+                'agent_name': getattr(event.agent, 'name', 'Unknown') if hasattr(event, 'agent') else 'Unknown',
+                'response_length': len(event.content.parts[0].text) if event.content and event.content.parts else 0,
+                'timestamp': datetime.datetime.now().isoformat()
+            }
+            send_debug_message(
+                f"📤 FINAL RESPONSE: {response_info['agent_name']} ({response_info['response_length']} chars)", 
+                'final_response', 
+                campaign_id, 
+                response_info
+            )
+        
+        # Log any errors
+        if hasattr(event, 'error') and event.error:
+            error_info = {
+                'agent_name': getattr(event.agent, 'name', 'Unknown') if hasattr(event, 'agent') else 'Unknown',
+                'error_message': str(event.error),
+                'error_type': type(event.error).__name__,
+                'timestamp': datetime.datetime.now().isoformat()
+            }
+            send_debug_message(
+                f"💥 AGENT ERROR: {error_info['agent_name']} - {error_info['error_message']}", 
+                'agent_error', 
+                campaign_id, 
+                error_info
+            )
+            
+    except Exception as e:
+        print(f"Error in log_agent_event: {e}")
+        send_debug_message(f"Debug logging error: {str(e)}", 'error', campaign_id)
 
 @sock.route('/debug-stream/<campaign_id>')
 def debug_stream(ws, campaign_id):
@@ -130,10 +237,10 @@ async def initialize_agent_for_new_campaign(campaign_id: str):
 
     # Create a message that instructs the agent to start a new campaign
     new_campaign_instruction = f"""
-I want to start a new campaign with ID: {campaign_id}
+NEW CAMPAIGN STARTUP: A new campaign has been created with campaign_id: {campaign_id}
 
-Please begin the character creation process and then start a new adventure.
 The campaign has been created in the database and is ready for you to manage.
+Please immediately begin the character creation process by routing to the Character Creation Agent.
 """
 
     content = types.Content(
@@ -149,13 +256,8 @@ The campaign has been created in the database and is ready for you to manage.
         session_id=f"session_{campaign_id}", 
         new_message=content
     ):
-        # Debug logging for agent events during initialization
-        if hasattr(event, 'agent') and event.agent:
-            send_debug_message(f"Agent called during initialization: {event.agent.name}", 'agent_transfer', campaign_id)
-        
-        if hasattr(event, 'actions') and event.actions:
-            if hasattr(event.actions, 'escalate') and event.actions.escalate:
-                send_debug_message(f"Agent escalated during initialization: {event.actions.escalate.agent_name}", 'agent_transfer', campaign_id)
+        # Enhanced debug logging for agent events during initialization
+        log_agent_event(event, campaign_id)
         
         if event.is_final_response():
             if event.content and event.content.parts:
@@ -163,7 +265,7 @@ The campaign has been created in the database and is ready for you to manage.
                 print(f"[Root Agent] New campaign {campaign_id} started: {final_response}")
                 send_debug_message(f"Root agent completed new campaign initialization", 'agent_transfer', campaign_id)
                 return final_response
-            break
+        break
 
 @app.route('/new-campaign', methods=['POST'])
 def new_campaign():
@@ -187,7 +289,7 @@ def new_campaign():
             "status": "success", 
             "campaign_id": campaign_id,
             "agent_response": agent_response,
-            "adk_url": f"http://localhost:8000/dev-ui/?app=agents&session=session_{campaign_id}"
+            "adk_url": get_adk_web_url(campaign_id)
         })
     except Exception as e:
         print(f"Error initializing agent for new campaign: {e}")
@@ -195,7 +297,7 @@ def new_campaign():
             "status": "success", 
             "campaign_id": campaign_id,
             "agent_response": "Campaign created but agent initialization failed",
-            "adk_url": f"http://localhost:8000/dev-ui/?app=agents&session=session_{campaign_id}"
+            "adk_url": get_adk_web_url(campaign_id)
         })
 
 @app.route('/campaign/<string:campaign_id>/characters', methods=['GET'])
@@ -352,27 +454,36 @@ async def initialize_agent_with_campaign(campaign_id: str, campaign_data: dict):
         for quest in campaign_data['quests']:
             quests_summary += f"- {quest.get('name', 'Unknown Quest')}: {quest.get('description', 'No description')}\n"
     
+    # Extract and prominently display the campaign context
+    campaign_context = ""
+    if 'context' in campaign_data and campaign_data['context']:
+        campaign_context = f"""
+CURRENT CAMPAIGN CONTEXT (Most Recent Story State):
+{campaign_data['context']}
+
+"""
+    else:
+        campaign_context = """
+CURRENT CAMPAIGN CONTEXT:
+No context has been saved yet. This appears to be a new campaign or the context was not properly saved.
+"""
+    
     campaign_summary = f"""
-CAMPAIGN CONTEXT - Campaign ID: {campaign_id}
+CAMPAIGN LOADED - Campaign ID: {campaign_id}
 
-CAMPAIGN DATA:
-{formatted_campaign_data}
-
-This is an existing campaign that has been loaded from the database. 
-The campaign data above contains all the current state including:
-- Characters and their stats
-- NPCs and their relationships
-- Monsters and encounters
-- Locations and quests
-- Campaign notes and story context
-- Previous story events and decisions
-
+{campaign_context}
 {characters_summary}
 {npcs_summary}
 {quests_summary}
 
+FULL CAMPAIGN DATA (for reference):
+{formatted_campaign_data}
+
+This is an existing campaign that has been loaded from the database. 
+The campaign context above contains the most recent story state and events.
+
 Your task is to continue this campaign from where it left off. 
-Study the campaign data carefully and be ready to continue the story seamlessly.
+Study the campaign context carefully and be ready to continue the story seamlessly.
 Do NOT start a new campaign or character creation process.
 
 IMPORTANT: Provide a brief summary of the campaign so far as your first response to help the player understand where they left off.
@@ -389,13 +500,8 @@ IMPORTANT: Provide a brief summary of the campaign so far as your first response
         session_id=f"session_{campaign_id}", 
         new_message=content
     ):
-        # Debug logging for agent events during campaign loading
-        if hasattr(event, 'agent') and event.agent:
-            send_debug_message(f"Agent called during campaign loading: {event.agent.name}", 'agent_transfer', campaign_id)
-        
-        if hasattr(event, 'actions') and event.actions:
-            if hasattr(event.actions, 'escalate') and event.actions.escalate:
-                send_debug_message(f"Agent escalated during campaign loading: {event.actions.escalate.agent_name}", 'agent_transfer', campaign_id)
+        # Enhanced debug logging for agent events during campaign loading
+        log_agent_event(event, campaign_id)
         
         if event.is_final_response():
             if event.content and event.content.parts:
@@ -432,7 +538,7 @@ def load_campaign(campaign_id):
             "campaign_id": campaign_id,
             "campaign_data": campaign_data,
             "agent_response": agent_response,
-            "adk_url": f"http://localhost:8000/dev-ui/?app=agents&session=session_{campaign_id}"
+            "adk_url": get_adk_web_url(campaign_id)
         })
     except Exception as e:
         print(f"Error initializing agent with campaign data: {e}")
@@ -441,7 +547,7 @@ def load_campaign(campaign_id):
             "campaign_id": campaign_id,
             "campaign_data": campaign_data,
             "agent_response": "Campaign loaded but agent initialization failed",
-            "adk_url": f"http://localhost:8000/dev-ui/?app=agents&session=session_{campaign_id}"
+            "adk_url": get_adk_web_url(campaign_id)
         })
 
 @app.route('/initialize-campaign', methods=['POST'])
@@ -556,13 +662,8 @@ def chat():
                 session_id=f"session_{campaign_id}", 
                 new_message=content
             ):
-                # Debug logging for agent events
-                if hasattr(event, 'agent') and event.agent:
-                    send_debug_message(f"Agent called: {event.agent.name}", 'agent_transfer', campaign_id)
-                
-                if hasattr(event, 'actions') and event.actions:
-                    if hasattr(event.actions, 'escalate') and event.actions.escalate:
-                        send_debug_message(f"Agent escalated to: {event.actions.escalate.agent_name}", 'agent_transfer', campaign_id)
+                # Enhanced debug logging for agent events
+                log_agent_event(event, campaign_id)
                 
                 if event.is_final_response():
                     if event.content and event.content.parts:
@@ -582,6 +683,68 @@ def chat():
     except Exception as e:
         print(f"Error in chat: {e}")
         send_debug_message(f"Error in chat: {str(e)}", 'error', campaign_id)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/sessions', methods=['GET'])
+def list_sessions():
+    """
+    API endpoint to list all active sessions.
+    """
+    try:
+        # Get all sessions from the session service
+        sessions = session_service.list_sessions(app_name="dungeon_master")
+        
+        session_list = []
+        for session in sessions:
+            session_info = {
+                'session_id': session.session_id,
+                'user_id': session.user_id,
+                'created_at': session.created_at.isoformat() if hasattr(session, 'created_at') else None,
+                'adk_web_url': get_adk_web_url(session.session_id.replace('session_', ''))
+            }
+            session_list.append(session_info)
+        
+        return jsonify({
+            "status": "success",
+            "sessions": session_list,
+            "total_sessions": len(session_list)
+        })
+        
+    except Exception as e:
+        print(f"Error listing sessions: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/sessions/<string:session_id>', methods=['DELETE'])
+def delete_session(session_id):
+    """
+    API endpoint to delete a specific session.
+    """
+    import asyncio
+    
+    try:
+        # Run the async delete operation
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(session_service.delete_session(
+            app_name="dungeon_master",
+            user_id="user_1",
+            session_id=session_id
+        ))
+        loop.close()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Session {session_id} deleted successfully"
+        })
+        
+    except Exception as e:
+        print(f"Error deleting session {session_id}: {e}")
         return jsonify({
             "status": "error",
             "message": str(e)

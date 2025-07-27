@@ -176,7 +176,7 @@
         <!-- Debug Tab Content -->
         <div id="debugTabContent" class="main-container rounded-lg p-6 hidden">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="font-medieval text-2xl text-amber-300">Debug Console</h3>
+                <h3 class="font-medieval text-2xl text-amber-300">Enhanced Debug Console</h3>
                 <div class="flex gap-2">
                     <button id="clearDebugBtn" class="btn-primary px-4 py-2 text-sm rounded-md">
                         Clear
@@ -184,20 +184,69 @@
                     <button id="toggleAutoScrollBtn" class="btn-primary px-4 py-2 text-sm rounded-md">
                         Auto-scroll: ON
                     </button>
+                    <button id="showSummaryBtn" class="btn-primary px-4 py-2 text-sm rounded-md">
+                        Show Summary
+                    </button>
                 </div>
             </div>
+            
+            <!-- Filter Controls -->
+            <div class="mb-4 p-3 bg-gray-800 border border-gray-600 rounded-lg">
+                <div class="flex flex-wrap gap-2 items-center">
+                    <span class="text-sm text-gray-300">Filter:</span>
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" class="debug-filter" data-type="agent_activated" checked> 
+                        <span class="ml-1 text-purple-400">🤖 Agents</span>
+                    </label>
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" class="debug-filter" data-type="agent_transfer" checked> 
+                        <span class="ml-1 text-cyan-400">🔄 Transfers</span>
+                    </label>
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" class="debug-filter" data-type="tool_call" checked> 
+                        <span class="ml-1 text-orange-400">🔧 Tools</span>
+                    </label>
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" class="debug-filter" data-type="tool_result" checked> 
+                        <span class="ml-1 text-green-400">✅ Results</span>
+                    </label>
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" class="debug-filter" data-type="final_response" checked> 
+                        <span class="ml-1 text-blue-400">📤 Responses</span>
+                    </label>
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" class="debug-filter" data-type="agent_error" checked> 
+                        <span class="ml-1 text-red-400">💥 Errors</span>
+                    </label>
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" class="debug-filter" data-type="api" checked> 
+                        <span class="ml-1 text-blue-400">🌐 API</span>
+                    </label>
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" class="debug-filter" data-type="console" checked> 
+                        <span class="ml-1 text-green-400">📝 Console</span>
+                    </label>
+                </div>
+            </div>
+            
             <div id="debugContainer" class="bg-black border border-gray-600 rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm">
-                <div class="text-green-400">Debug console initialized...</div>
+                <div class="text-green-400">Enhanced debug console initialized...</div>
                 <div class="text-yellow-400">Waiting for debug output...</div>
             </div>
             <div class="mt-4 text-sm text-gray-400">
-                <p>This console shows:</p>
+                <p>This enhanced debug console shows:</p>
                 <ul class="list-disc list-inside mt-2 space-y-1">
-                    <li>Agent transfers and handoffs</li>
-                    <li>Console output from the backend</li>
-                    <li>API calls and responses</li>
-                    <li>Error messages and debugging info</li>
+                    <li>🤖 Agent activations and descriptions</li>
+                    <li>🔄 Agent transfers and escalations with reasons</li>
+                    <li>🔧 Tool calls with arguments and parameters</li>
+                    <li>✅ Tool results and success/failure status</li>
+                    <li>📤 Final responses with character counts</li>
+                    <li>💥 Agent errors with detailed error information</li>
+                    <li>🌐 API calls and responses</li>
+                    <li>📝 Console output from the backend</li>
+                    <li>⚠️ Warning messages and debugging info</li>
                 </ul>
+                <p class="mt-2 text-xs text-gray-500">Click "Show Details" to expand detailed information for each event.</p>
             </div>
         </div>
 
@@ -231,53 +280,179 @@
         let isInitialized = false;
         let debugWebSocket = null;
         let autoScrollEnabled = true;
+        let debugMessages = []; // Store all debug messages for filtering and summary
+        let activeFilters = new Set(['agent_activated', 'agent_transfer', 'tool_call', 'tool_result', 'final_response', 'agent_error', 'api', 'console']);
 
         // Debug console functions
-        function addDebugMessage(message, type = 'info') {
+        function addDebugMessage(message, type = 'info', data = null) {
             const debugContainer = document.getElementById('debugContainer');
             const messageDiv = document.createElement('div');
             
             const timestamp = new Date().toLocaleTimeString();
             let colorClass = 'text-gray-300';
+            let icon = 'ℹ️';
             
             switch (type) {
+                case 'agent_activated':
+                    colorClass = 'text-purple-400';
+                    icon = '🤖';
+                    break;
                 case 'agent_transfer':
                     colorClass = 'text-cyan-400';
-                    message = `🔄 [${timestamp}] AGENT TRANSFER: ${message}`;
+                    icon = '🔄';
+                    break;
+                case 'tool_call':
+                    colorClass = 'text-orange-400';
+                    icon = '🔧';
+                    break;
+                case 'tool_result':
+                    colorClass = 'text-green-400';
+                    icon = '✅';
+                    break;
+                case 'final_response':
+                    colorClass = 'text-blue-400';
+                    icon = '📤';
+                    break;
+                case 'agent_error':
+                    colorClass = 'text-red-400';
+                    icon = '💥';
                     break;
                 case 'console':
                     colorClass = 'text-green-400';
-                    message = `📝 [${timestamp}] CONSOLE: ${message}`;
+                    icon = '📝';
                     break;
                 case 'api':
                     colorClass = 'text-blue-400';
-                    message = `🌐 [${timestamp}] API: ${message}`;
+                    icon = '🌐';
                     break;
                 case 'error':
                     colorClass = 'text-red-400';
-                    message = `❌ [${timestamp}] ERROR: ${message}`;
+                    icon = '❌';
                     break;
                 case 'warning':
                     colorClass = 'text-yellow-400';
-                    message = `⚠️ [${timestamp}] WARNING: ${message}`;
+                    icon = '⚠️';
                     break;
                 default:
                     colorClass = 'text-gray-300';
-                    message = `ℹ️ [${timestamp}] ${message}`;
+                    icon = 'ℹ️';
             }
             
-            messageDiv.className = colorClass;
-            messageDiv.textContent = message;
+            // Store message for filtering and summary
+            const debugEntry = {
+                message: message,
+                type: type,
+                data: data,
+                timestamp: timestamp,
+                element: null
+            };
+            debugMessages.push(debugEntry);
+            
+            // Create the main message
+            const messageText = `${icon} [${timestamp}] ${message}`;
+            messageDiv.className = `${colorClass} mb-1 debug-message`;
+            messageDiv.setAttribute('data-type', type);
+            messageDiv.textContent = messageText;
+            
+            // Add expandable data section if data exists
+            if (data && Object.keys(data).length > 0) {
+                const dataDiv = document.createElement('div');
+                dataDiv.className = 'ml-4 mb-2';
+                
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'text-xs text-gray-400 hover:text-gray-300 cursor-pointer mb-1';
+                toggleBtn.textContent = '📋 Show Details';
+                
+                const dataContent = document.createElement('div');
+                dataContent.className = 'hidden bg-gray-800 border border-gray-600 rounded p-2 text-xs font-mono';
+                dataContent.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                toggleBtn.onclick = function() {
+                    if (dataContent.classList.contains('hidden')) {
+                        dataContent.classList.remove('hidden');
+                        toggleBtn.textContent = '📋 Hide Details';
+                    } else {
+                        dataContent.classList.add('hidden');
+                        toggleBtn.textContent = '📋 Show Details';
+                    }
+                };
+                
+                dataDiv.appendChild(toggleBtn);
+                dataDiv.appendChild(dataContent);
+                messageDiv.appendChild(dataDiv);
+            }
+            
+            debugEntry.element = messageDiv;
             debugContainer.appendChild(messageDiv);
+            
+            // Apply current filters
+            applyFilters();
             
             if (autoScrollEnabled) {
                 debugContainer.scrollTop = debugContainer.scrollHeight;
             }
         }
 
+        function applyFilters() {
+            const messages = document.querySelectorAll('.debug-message');
+            messages.forEach(msg => {
+                const type = msg.getAttribute('data-type');
+                if (activeFilters.has(type)) {
+                    msg.style.display = 'block';
+                } else {
+                    msg.style.display = 'none';
+                }
+            });
+        }
+
+        function showSummary() {
+            const summary = {
+                total: debugMessages.length,
+                byType: {},
+                agents: new Set(),
+                tools: new Set(),
+                errors: 0
+            };
+            
+            debugMessages.forEach(entry => {
+                // Count by type
+                summary.byType[entry.type] = (summary.byType[entry.type] || 0) + 1;
+                
+                // Track agents
+                if (entry.type === 'agent_activated' && entry.data && entry.data.agent_name) {
+                    summary.agents.add(entry.data.agent_name);
+                }
+                
+                // Track tools
+                if (entry.type === 'tool_call' && entry.data && entry.data.tool_name) {
+                    summary.tools.add(entry.data.tool_name);
+                }
+                
+                // Count errors
+                if (entry.type === 'agent_error' || entry.type === 'error') {
+                    summary.errors++;
+                }
+            });
+            
+            const summaryText = `
+📊 DEBUG SUMMARY:
+Total Events: ${summary.total}
+Errors: ${summary.errors}
+Agents Used: ${Array.from(summary.agents).join(', ') || 'None'}
+Tools Called: ${Array.from(summary.tools).join(', ') || 'None'}
+
+Event Breakdown:
+${Object.entries(summary.byType).map(([type, count]) => `  ${type}: ${count}`).join('\n')}
+            `.trim();
+            
+            addDebugMessage(summaryText, 'console');
+        }
+
         function clearDebugConsole() {
             const debugContainer = document.getElementById('debugContainer');
             debugContainer.innerHTML = '<div class="text-green-400">Debug console cleared...</div>';
+            debugMessages = []; // Clear stored messages
+            applyFilters(); // Re-apply filters to show only cleared message
         }
 
         function toggleAutoScroll() {
@@ -308,7 +483,7 @@
             debugWebSocket.onmessage = function(event) {
                 try {
                     const data = JSON.parse(event.data);
-                    addDebugMessage(data.message, data.type);
+                    addDebugMessage(data.message, data.type, data.data);
                 } catch (error) {
                     addDebugMessage(`Failed to parse debug message: ${error.message}`, 'error');
                 }
@@ -766,6 +941,20 @@
         // Debug console event listeners
         document.getElementById('clearDebugBtn').addEventListener('click', clearDebugConsole);
         document.getElementById('toggleAutoScrollBtn').addEventListener('click', toggleAutoScroll);
+        document.getElementById('showSummaryBtn').addEventListener('click', showSummary);
+        
+        // Filter event listeners
+        document.querySelectorAll('.debug-filter').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const type = this.getAttribute('data-type');
+                if (this.checked) {
+                    activeFilters.add(type);
+                } else {
+                    activeFilters.delete(type);
+                }
+                applyFilters();
+            });
+        });
         
         // Add event listeners for expandable items
         function addExpandableItemListeners() {
@@ -999,4 +1188,4 @@
         document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
-</html> 
+</html>

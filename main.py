@@ -1,4 +1,4 @@
-from google.adk.sessions import InMemorySessionService
+from google.adk.sessions import FirestoreSessionService
 from agents.agent import root_agent
 from google.genai import types # For creating message Content/Parts
 from google.adk.runners import Runner
@@ -16,7 +16,7 @@ SESSION_ID = "session_01"
 
 async def main():
     # When running directly, we must manually set up the runner and memory.
-    session_service = InMemorySessionService()
+    session_service = FirestoreSessionService()
     session = await session_service.create_session(
         app_name=APP_NAME,
         user_id=USER_ID,

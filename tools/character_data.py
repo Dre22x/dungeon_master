@@ -1,5 +1,7 @@
 from tools import _get_item_details, _fetch_index
 import textwrap
+from tools.game_mechanics import calculate_hp
+
 # --- Character Data Tools ---
 
 def get_ability_score_details(score_name: str) -> dict:
@@ -142,6 +144,15 @@ def create_character_data(
     Creates a character data dictionary suitable for saving to the campaign database.
     This is the data format expected by save_character_to_campaign.
     """
+    # Calculate hit points based on class, level, and constitution
+    temp_char_data = {
+        'name': name,
+        'class': char_class,
+        'level': level,
+        'ability_scores': ability_scores
+    }
+    hit_points = calculate_hp(temp_char_data)
+    
     character_data = {
         'name': name,
         'race': race,
@@ -153,6 +164,8 @@ def create_character_data(
         'skills': skills,
         'proficiencies': proficiencies,
         'equipment': equipment,
+        'hit_points': hit_points,
+        'max_hit_points': hit_points,
         'experience': 0,  # Starting experience
         'inventory': [],  # Empty inventory to start
         'spells': [],     # Empty spells list to start

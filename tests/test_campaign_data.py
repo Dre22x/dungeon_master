@@ -5,7 +5,7 @@ Test script to inspect campaign data in the database.
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from firestore import db_utils
 

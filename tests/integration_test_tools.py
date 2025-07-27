@@ -1,5 +1,11 @@
 import unittest
 import time
+import sys
+import os
+
+# Add the parent directory to the path so we can import the tools modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from tools import tools, character_data, classes, races, spells, subclasses, monsters, equipment, weapons, magic_items, traits, subraces, rules, game_mechanics
 
 # Helper to avoid hammering the API

@@ -78,9 +78,22 @@ def save_campaign(campaign_id: str, context: str) -> str:
 
     try:
         campaign_ref = db.collection('campaigns').document(campaign_id)
-        campaign_ref.update({'context': context})
-        print(f"[DatabaseManager] Campaign '{campaign_id}' updated successfully.")
-        return f"Campaign '{campaign_id}' has been updated successfully."
+        
+        # Check if campaign exists
+        campaign_doc = campaign_ref.get()
+        if not campaign_doc.exists:
+            return f"Error: Campaign '{campaign_id}' not found."
+        
+        # Update the campaign with context and timestamp
+        update_data = {
+            'context': context,
+            'last_saved': firestore.SERVER_TIMESTAMP,
+            'context_length': len(context)
+        }
+        
+        campaign_ref.update(update_data)
+        print(f"[DatabaseManager] Campaign '{campaign_id}' context updated successfully. Context length: {len(context)} characters.")
+        return f"Campaign '{campaign_id}' has been updated successfully with {len(context)} characters of context."
 
     except Exception as e:
         return f"Error saving campaign '{campaign_id}': {e}"
