@@ -5,310 +5,249 @@ An AI-powered Dungeons & Dragons game master that uses Google's Agent Developmen
 ## Features
 
 - **Multi-Agent System**: Specialized agents for different aspects of D&D gameplay
-- **Web Interface**: Flask-based web UI for campaign management
-- **ADK Integration**: Visual development interface for agent interaction
-- **Firestore Database**: Persistent campaign and character storage
-- **Character Creation**: Automated character creation with proper D&D rules
-- **Multiple Character Support**: Create multiple characters for a single campaign
-- **Campaign Outline Generation**: Unique story outlines for each campaign
-- **Dynamic Model Configuration**: Agent models configured via YAML file
-- **Combat System**: Rules-based combat mechanics
-- **NPC Interactions**: Dynamic NPC roleplaying
-- **Story Generation**: AI-driven narrative progression
+- **Character Creation**: Guided character creation with all D&D 5e options
+- **Campaign Management**: Persistent campaign storage and loading
+- **Combat Mechanics**: Automated combat resolution and dice rolling
+- **NPC Interactions**: Dynamic NPC dialogue and roleplay
+- **Story Generation**: AI-driven narrative and environmental descriptions
+- **Custom UI**: Web-based interface for seamless gameplay experience
 
-## Setup
+## Quick Start
 
 ### Prerequisites
 
 1. **Python 3.8+** installed
 2. **Google ADK** installed: `pip install google-adk`
-3. **Google API Key** configured (already set in the code)
-4. **Firestore** database configured
-5. **PyYAML** installed: `pip install pyyaml`
+3. **Firebase/Firestore** project set up with service account key
+4. **Google Cloud** credentials configured
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repository**:
    ```bash
    git clone <repository-url>
    cd dungeon_master
    ```
 
-2. Install dependencies:
+2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Initialize the database:
+3. **Set up configuration**:
+   - Place your Firebase service account key in `config/service-account-key.json`
+   - Ensure `adk.yaml` is in the project root
+
+4. **Initialize the database**:
    ```bash
    python init_database.py
    ```
 
-## Running the Application
+### Running the Application
 
-### Automated Startup (Recommended)
-
-Use the startup script to launch both services automatically:
+**Option 1: Start both services with one command**
 ```bash
 python start_app.py
 ```
 
-This will:
-- Start the Flask web server on `http://localhost:5001`
-- Start the ADK web interface on `http://localhost:8000`
-- Check for port conflicts and ADK installation
-- Provide graceful shutdown with Ctrl+C
-
-### Manual Setup (Alternative)
-
-If you prefer to run services separately:
+**Option 2: Start services separately**
 
 **Terminal 1 - Flask Web Server:**
 ```bash
-cd UI
-python app.py
+python UI/app.py
 ```
+- Web interface available at `http://localhost:5001`
+- Check for port conflicts and ADK installation
 
-**Terminal 2 - ADK Development UI:**
+**Terminal 2 - Development:**
 ```bash
+# Optional: For development and debugging
 adk web .
 ```
 
-## Usage
+### Usage
 
 1. **Start both services** (Flask + ADK dev UI)
-2. **Open the web interface** at `http://localhost:5001`
-3. **Create a new campaign** or **load an existing one**
-4. **Use the ADK dev UI** at `http://localhost:8000` for agent interaction
-5. **Interact with your AI Dungeon Master** through the ADK interface
+2. **Open your browser** to `http://localhost:5001`
+3. **Click "New Campaign"** to start a new adventure
+4. **Interact with your AI Dungeon Master** through the web interface
+5. **Create characters, explore, and battle** in your custom D&D world
 
-### Multiple Character Creation
+## Architecture
 
-The system now supports creating multiple characters for a single campaign:
+### Agent Hierarchy
 
-- **Automatic Prompting**: After creating your first character, the AI will ask if you want to create another
-- **Party Balance**: The AI will suggest complementary character types for balanced party compositions
-- **Flexible Creation**: You can create as many characters as you want for your campaign
-- **Character Management**: All characters are saved to the campaign and can be viewed in the web interface
+The system uses a hierarchical agent architecture:
 
-**Example Party Compositions:**
-- **Balanced Party**: Tank (Fighter/Paladin) + Healer (Cleric) + Damage (Wizard/Rogue) + Support (Bard/Ranger)
-- **Combat Focused**: Multiple fighters, paladins, or barbarians
-- **Magic Heavy**: Multiple spellcasters (Wizard, Cleric, Bard, Sorcerer)
-- **Stealth Focused**: Rogues, rangers, and monks
-- **Support Heavy**: Bards, clerics, and druids
-
-### Campaign Outline Generation
-
-Each new campaign automatically generates a unique story outline:
-
-- **Unique Story Elements**: Every campaign gets a distinct title, theme, and main quest
-- **Structured Narrative**: Three-act story structure with clear plot progression
-- **Key NPCs and Monsters**: Pre-defined characters and creatures for the story
-- **Consistent Storytelling**: The AI uses the outline as a guide for all narrative decisions
-- **Theme Variety**: Supports classic fantasy, horror, political intrigue, and other themes
-
-**Campaign Outline Structure:**
-```json
-{
-  "title": "Unique Campaign Title",
-  "theme": "Story Theme",
-  "summary": "Brief overview of the campaign",
-  "main_quest": "Clear primary objective",
-  "plot_acts": {
-    "act_1": { "title": "Act Title", "summary": "What happens", "key_location": "Location", "primary_conflict": "Challenge" },
-    "act_2": { "title": "Act Title", "summary": "What happens", "key_location": "Location", "primary_conflict": "Challenge" },
-    "act_3": { "title": "Act Title", "summary": "What happens", "key_location": "Location", "primary_conflict": "Challenge" }
-  },
-  "key_npcs": [{"name": "NPC Name", "location": "Where found", "role": "Story role"}],
-  "key_monsters": [{"name": "Monster Name", "location": "Where found", "role": "Story role"}]
-}
+```
+Root Agent (Orchestrator)
+├── Character Creation Agent
+├── Campaign Creation Agent
+├── Narrative Agent
+├── Rules Lawyer Agent
+├── NPC Agent
+└── Player Interface Agent
 ```
 
-### Agent Model Configuration
+### Key Components
 
-The system now supports dynamic model configuration through the YAML file:
-
-- **Centralized Configuration**: All agent models are configured in `adk.yaml`
-- **Easy Model Switching**: Change models by updating the YAML file
-- **Per-Agent Models**: Different agents can use different models
-- **Fallback Support**: Default model used if configuration is missing
-
-**Example YAML Configuration:**
-```yaml
-agents:
-  - name: root_agent
-    model: gemini-2.5-flash-lite-preview-06-17
-    description: "Master orchestrator and Game Master"
-  - name: narrative_agent
-    model: gemini-2.5-flash-lite-preview-06-17
-    description: "Provides environmental descriptions"
-    # ... other agents
-```
-
-## Agent System
-
-The application uses a multi-agent architecture:
-
-- **Root Agent**: Master orchestrator and game flow manager
-- **Character Creation Agent**: Handles character creation and customization
-- **Narrative Agent**: Provides environmental descriptions and story progression
-- **NPC Agent**: Roleplays NPCs during dialogue interactions
-- **Rules Lawyer Agent**: Handles combat, skill checks, and game mechanics
+- **Root Agent**: Master coordinator that routes actions to specialist agents
+- **Character Creation Agent**: Guides players through character creation
+- **Campaign Creation Agent**: Generates campaign outlines and story structure
+- **Narrative Agent**: Handles story elements and environmental descriptions
+- **Rules Lawyer Agent**: Manages combat mechanics and rules questions
+- **NPC Agent**: Handles NPC dialogue and roleplay
 - **Player Interface Agent**: Manages direct player communication
 
-## File Structure
+### Data Flow
 
-```
-dungeon_master/
-├── agents/                 # Agent definitions and instructions
-│   ├── config_loader.py   # Configuration loading utilities
-│   ├── agent.py           # Main root agent
-│   └── sub_agents.py      # Sub-agent definitions
-├── tools/                  # D&D game mechanics and tools
-│   └── campaign_outline.py # Campaign outline generation tools
-├── UI/                     # Flask web interface
-├── firestore/              # Database management
-├── config/                 # Configuration files
-├── adk.yaml               # ADK configuration with agent models
-├── main.py                # Direct execution mode
-├── start_app.py           # Startup script
-├── test_multiple_character_creation.py  # Test for multiple character creation
-├── test_campaign_outline_generation.py  # Test for campaign outline generation
-└── test_config_loading.py # Test for configuration loading
-```
-
-## Testing
-
-### Configuration Loading Test
-Test the new agent configuration loading functionality:
-```bash
-python test_config_loading.py
-```
-
-This test will:
-- Verify that agent models can be loaded from the YAML file
-- Test individual agent model retrieval
-- Verify agent creation with loaded configurations
-- Test YAML parsing functionality
-
-### Campaign Outline Generation Test
-Test the campaign outline generation functionality:
-```bash
-python test_campaign_outline_generation.py
-```
-
-This test will:
-- Create a new campaign
-- Verify that a unique campaign outline is generated
-- Test multiple campaigns to ensure outline uniqueness
-- Verify that campaign loading references the outline
-
-### Multiple Character Creation Test
-Test the multiple character creation functionality:
-```bash
-python test_multiple_character_creation.py
-```
-
-This test will:
-- Create a new campaign
-- Create multiple characters (Fighter and Wizard)
-- Verify that the AI asks about creating additional characters
-- Check that all characters are properly saved
-- Test campaign loading with multiple characters
-
-### Other Tests
-Run the complete test suite:
-```bash
-python -m pytest test_*.py
-```
+1. **Player Input** → Player Interface Agent
+2. **Action Routing** → Root Agent determines appropriate specialist
+3. **Specialist Processing** → Specialist agent handles the specific task
+4. **Response Coordination** → Root Agent coordinates multiple responses if needed
+5. **Player Output** → Final response delivered to player
 
 ## Configuration
 
-### Agent Model Configuration
+### Model Configuration
 
-To change the model used by an agent, edit the `adk.yaml` file:
+All agents use models defined in `adk.yaml`. To change the model used by an agent, edit the `adk.yaml` file:
 
 ```yaml
 agents:
-  - name: root_agent
-    model: gemini-2.5-flash-lite-preview-06-17  # Change this line
-    description: "Master orchestrator and Game Master"
-    instruction_file: agents/instructions/root_agent.txt
-    # ... other configuration
+  root_agent:
+    model: gemini-1.5-flash
+  character_creation_agent:
+    model: gemini-1.5-flash
+  # ... other agents
 ```
 
-Available models include:
-- `gemini-2.5-flash-lite-preview-06-17` (current default)
-- `gemini-2.0-flash`
-- `gemini-1.5-pro`
-- Other Gemini models as available
+### Database Configuration
 
-### Adding New Agents
+The application uses Firebase Firestore for persistent storage:
 
-1. Add agent configuration to `adk.yaml`:
-   ```yaml
-   - name: new_agent
-     model: gemini-2.5-flash-lite-preview-06-17
-     description: "Description of the new agent"
-     instruction_file: agents/instructions/new_agent.txt
-   ```
-
-2. Create agent definition in `agents/sub_agents.py`
-3. Add instruction file in `agents/instructions/`
-4. Register agent in `agents/agent.py` if needed
-
-## Troubleshooting
-
-### "No agents found" in ADK dev UI
-- Ensure `adk.yaml` exists in the project root
-- Verify all agent instruction files are present
-- Check that `adk web .` is running from the project root
-
-### Campaign loading issues
-- Verify Firestore database is properly configured
-- Check that `config/service-account-key.json` exists
-- Ensure database initialization was successful
-
-### Flask server issues
-- Check that port 5001 is available
-- Verify all Python dependencies are installed
-- Check the console for error messages
-
-### Multiple character creation not working
-- Ensure you're using the latest agent instructions
-- Check that the Character Creation Agent is properly configured
-- Verify that the campaign is being saved correctly
-
-### Campaign outline generation not working
-- Ensure the Narrative Agent has access to the campaign outline tools
-- Check that the database is properly configured for outline storage
-- Verify that the agent instructions include outline generation workflow
-
-### Configuration loading issues
-- Ensure `adk.yaml` file exists and is properly formatted
-- Check that PyYAML is installed: `pip install pyyaml`
-- Verify that agent names in YAML match agent names in code
-- Check console for configuration loading error messages
+- **Campaigns**: Campaign data, context, and state
+- **Characters**: Player character sheets and data
+- **NPCs**: Non-player character information
+- **Monsters**: Monster statistics and data
+- **Locations**: World locations and descriptions
+- **Quests**: Active quests and objectives
 
 ## Development
 
-### Testing
-Run the test suite:
-```bash
-python -m pytest test_*.py
-```
+### Adding New Tools
+
+1. **Create the tool function** in the appropriate module under `tools/`
+2. **Add the tool to the agent** in `agents/agent.py` or `agents/sub_agents.py`
+3. **Update agent instructions** to include the new tool
+4. **Test the integration** with the agent system
 
 ### Adding New Agents
-1. Create agent definition in `agents/sub_agents.py`
-2. Add instruction file in `agents/instructions/`
-3. Update `adk.yaml` configuration with model name
-4. Register agent in `agents/agent.py`
 
-### Adding New Tools
-1. Create tool function in `tools/` directory
-2. Add tool to agent configuration in `adk.yaml`
-3. Update agent instructions to use the tool
+1. **Create agent configuration** in `adk.yaml`:
+   ```yaml
+   agents:
+     new_agent:
+       model: gemini-1.5-flash
+       description: "Description of the new agent"
+   ```
+
+2. **Create agent instance** in `agents/sub_agents.py`:
+   ```python
+   new_agent = LlmAgent(
+       name="new_agent",
+       model=get_model_for_agent("new_agent"),
+       description="Description of the new agent",
+       instruction=load_instructions("new_agent.txt"),
+       tools=[tool1, tool2, tool3]
+   )
+   ```
+
+3. **Add routing tool** in `tools/misc_tools.py`:
+   ```python
+   def route_to_new_agent(action_data: Dict[str, Any]) -> str:
+       return run_sub_agent_sync(new_agent, action_data)
+   ```
+
+4. **Update root agent** to include the new agent and routing tool
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"No agents found" in ADK dev UI**
+   - Ensure `adk.yaml` exists in the project root
+   - Check that the agent configurations are correct
+   - Verify that `adk web .` is running from the project root
+
+2. **Database connection errors**
+   - Verify `config/service-account-key.json` exists and is valid
+   - Check Firebase project configuration
+   - Ensure Firestore is enabled in your Firebase project
+
+3. **Model not found errors**
+   - Ensure `adk.yaml` file exists and is properly formatted
+   - Check that the model names are correct
+   - Verify Google Cloud credentials are set up
+
+4. **Tool not found errors**
+   - Check that the tool is properly imported
+   - Verify the tool is added to the agent's tools list
+   - Update `adk.yaml` configuration with model name
+
+5. **Session management issues**
+   - Check that the session service is properly initialized
+   - Verify session IDs are being generated correctly
+   - Ensure proper session cleanup is happening
+
+### Debug Mode
+
+Enable debug logging by setting the `DEBUG` environment variable:
+
+```bash
+export DEBUG=1
+python UI/app.py
+```
+
+This will provide detailed logging of agent interactions, tool calls, and session management.
+
+## Project Structure
+
+```
+dungeon_master/
+├── agents/                    # Agent definitions and instructions
+│   ├── agent.py              # Root agent configuration
+│   ├── sub_agents.py         # Specialist agent definitions
+│   ├── config_loader.py      # Model configuration loading
+│   └── instructions/         # Agent instruction files
+├── tools/                    # Tool implementations
+│   ├── character_data.py     # Character creation tools
+│   ├── campaign_outline.py   # Campaign management tools
+│   ├── game_mechanics.py     # Combat and rules tools
+│   ├── misc_tools.py         # Routing and utility tools
+│   └── ...                   # Other specialized tools
+├── firestore/                # Database utilities
+│   ├── database_manager.py   # Database operations
+│   └── db_utils.py          # Database utility functions
+├── UI/                       # Web interface
+│   ├── app.py               # Flask application
+│   ├── index.html           # Main page
+│   └── campaign.html        # Campaign interface
+├── config/                   # Configuration files
+│   └── service-account-key.json
+├── tests/                    # Test files
+├── adk.yaml                 # ADK configuration with agent models
+├── start_app.py             # Application startup script
+└── README.md                # This file
+```
+
+## Contributing
+
+1. **Fork the repository**
+2. **Create a feature branch**
+3. **Make your changes**
+4. **Add tests** for new functionality
+5. **Submit a pull request**
 
 ## License
 

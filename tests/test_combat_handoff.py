@@ -9,7 +9,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agents.sub_agents import narrative_agent, rules_lawyer_agent, player_interface_agent
+from root_agent.sub_agents import narrative_agent, rules_lawyer_agent, player_interface_agent
 from tools.game_mechanics import start_combat, get_combat_state, end_combat
 from firestore.db_utils import save_campaign, load_campaign
 import json

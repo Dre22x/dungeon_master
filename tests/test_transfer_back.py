@@ -6,9 +6,9 @@ Test to verify that character creation agent transfers back to root agent after 
 import asyncio
 import sys
 import os
-sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from agents.agent import root_agent
+from root_agent.agent import root_agent
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types

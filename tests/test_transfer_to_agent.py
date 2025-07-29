@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-Simple test to verify agent transfer works correctly.
+Test to verify the new transfer_to_agent function works correctly.
 """
 
 import asyncio
 import sys
 import os
-sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from agents.agent import root_agent
+from root_agent.agent import root_agent
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types
 
-async def test_agent_transfer():
-    """Test that the root agent properly transfers to character creation agent."""
+async def test_transfer_to_agent():
+    """Test that the root agent properly transfers to character creation agent using transfer_to_agent."""
     
-    print("🧪 Testing Agent Transfer")
+    print("🧪 Testing Transfer to Agent Function")
     print("=" * 50)
     
     # Set up session and runner
@@ -24,7 +24,7 @@ async def test_agent_transfer():
     session = await session_service.create_session(
         app_name="dungeon_master",
         user_id="test_user",
-        session_id="test_session",
+        session_id="test_transfer_session",
     )
 
     runner = Runner(
@@ -34,7 +34,7 @@ async def test_agent_transfer():
     )
 
     # Test message that should trigger character creation
-    test_message = "NEW CAMPAIGN STARTUP: A new campaign has been created with campaign_id: test123"
+    test_message = "NEW CAMPAIGN STARTUP: A new campaign has been created with campaign_id: test_transfer"
     
     content = types.Content(
         role='user', 
@@ -47,15 +47,18 @@ async def test_agent_transfer():
     # Run the agent
     async for event in runner.run_async(
         user_id="test_user", 
-        session_id="test_session", 
+        session_id="test_transfer_session", 
         new_message=content
     ):
         if hasattr(event, 'agent') and event.agent:
             print(f"🤖 Agent activated: {event.agent.name}")
         
         if hasattr(event, 'actions') and event.actions:
-            if hasattr(event.actions, 'escalate') and event.actions.escalate:
-                print(f"🔄 Agent transfer: {event.actions.escalate.agent_name}")
+            if hasattr(event.actions, 'tool_calls') and event.actions.tool_calls:
+                for tool_call in event.actions.tool_calls:
+                    print(f"🔧 Tool call: {tool_call.name}")
+                    if hasattr(tool_call, 'args'):
+                        print(f"   Args: {tool_call.args}")
         
         if event.is_final_response():
             if event.content and event.content.parts:
@@ -66,4 +69,4 @@ async def test_agent_transfer():
     print("\n✅ Test completed!")
 
 if __name__ == "__main__":
-    asyncio.run(test_agent_transfer()) 
+    asyncio.run(test_transfer_to_agent()) 

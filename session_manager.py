@@ -45,17 +45,9 @@ class SessionManager:
     def open_adk_web(self, campaign_id: str = None):
         """Open ADK web interface with optional session."""
         if campaign_id:
-            url = f"http://localhost:8000/dev-ui/?app=dungeon_master&session=session_{campaign_id}"
-            print(f"🌐 Opening ADK web for campaign: {campaign_id}")
+            print(f"🌐 ADK web interface is no longer used - all interactions happen in the main UI")
         else:
-            url = "http://localhost:8000/dev-ui/?app=dungeon_master"
-            print("🌐 Opening ADK web interface")
-        
-        try:
-            webbrowser.open(url)
-        except Exception as e:
-            print(f"❌ Error opening browser: {e}")
-            print(f"Please manually navigate to: {url}")
+            print("🌐 ADK web interface is no longer used - all interactions happen in the main UI")
     
     def display_sessions(self):
         """Display all sessions in a formatted way."""
@@ -72,7 +64,6 @@ class SessionManager:
             session_id = session.get('session_id', 'Unknown')
             user_id = session.get('user_id', 'Unknown')
             created_at = session.get('created_at', 'Unknown')
-            adk_url = session.get('adk_web_url', 'N/A')
             
             # Extract campaign ID from session ID
             campaign_id = session_id.replace('session_', '') if session_id.startswith('session_') else session_id
@@ -81,7 +72,6 @@ class SessionManager:
             print(f"   Campaign ID: {campaign_id}")
             print(f"   User ID: {user_id}")
             print(f"   Created: {created_at}")
-            print(f"   ADK Web URL: {adk_url}")
             print("-" * 80)
 
 def main():

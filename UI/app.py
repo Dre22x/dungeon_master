@@ -4,12 +4,10 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from firestore import db_utils
-from agents.agent import root_agent
+from root_agent.agent import root_agent
 import datetime
 import json
 import threading
-import queue
-from flask_sock import Sock
 
 def make_json_serializable(obj):
     if isinstance(obj, dict):
@@ -21,173 +19,32 @@ def make_json_serializable(obj):
     else:
         return str(obj)  # Convert any other objects to string
 
-def get_adk_web_url(campaign_id: str) -> str:
-    """
-    Generate ADK web URL that automatically switches to the campaign session.
-    """
-    return f"http://localhost:8000/dev-ui/?app=dungeon_master&session=session_{campaign_id}"
-
 # Initialize the Flask application
 app = Flask(__name__, template_folder='.')
 
-# Initialize WebSocket extension
-sock = Sock(app)
-
 # Global session service for persistent sessions
-from google.adk.sessions import FirestoreSessionService
-session_service = FirestoreSessionService()
+from google.adk.sessions import InMemorySessionService
+session_service = InMemorySessionService()
 
-# Global debug message queue for streaming debug output
-debug_messages = queue.Queue()
-debug_subscribers = set()
+# Global session tracking for InMemorySessionService
+active_sessions = set()
 
-# ==============================================================================
-#  ENHANCED DEBUG SYSTEM
-# ==============================================================================
+def add_session_to_tracking(session_id):
+    """Add a session to the active sessions tracking."""
+    active_sessions.add(session_id)
+    print(f"📝 Session added to tracking: {session_id}")
 
-def send_debug_message(message, message_type='info', campaign_id=None, data=None):
-    """Send a debug message to all connected clients with enhanced data support."""
-    debug_data = {
-        'message': message,
-        'type': message_type,
-        'campaign_id': campaign_id,
-        'timestamp': datetime.datetime.now().isoformat(),
-        'data': make_json_serializable(data) if data else None
-    }
-    debug_messages.put(debug_data)
-    
-    # Send to all connected subscribers
-    for ws in list(debug_subscribers):
-        try:
-            ws.send(json.dumps(debug_data))
-        except Exception as e:
-            print(f"Error sending debug message: {e}")
-            debug_subscribers.discard(ws)
+def remove_session_from_tracking(session_id):
+    """Remove a session from the active sessions tracking."""
+    active_sessions.discard(session_id)
+    print(f"📝 Session removed from tracking: {session_id}")
 
-def log_agent_event(event, campaign_id):
-    """Enhanced logging for agent events with detailed information."""
-    try:
-        # Log agent calls
-        if hasattr(event, 'agent') and event.agent:
-            agent_info = {
-                'agent_name': event.agent.name,
-                'agent_description': event.agent.description if hasattr(event.agent, 'description') else 'No description',
-                'timestamp': datetime.datetime.now().isoformat()
-            }
-            send_debug_message(
-                f"🤖 AGENT ACTIVATED: {event.agent.name}", 
-                'agent_activated', 
-                campaign_id, 
-                agent_info
-            )
-        
-        # Log agent escalations/transfers
-        if hasattr(event, 'actions') and event.actions:
-            if hasattr(event.actions, 'escalate') and event.actions.escalate:
-                escalation_info = {
-                    'from_agent': getattr(event.agent, 'name', 'Unknown') if hasattr(event, 'agent') else 'Unknown',
-                    'to_agent': event.actions.escalate.agent_name,
-                    'reason': getattr(event.actions.escalate, 'reason', 'No reason provided'),
-                    'timestamp': datetime.datetime.now().isoformat()
-                }
-                send_debug_message(
-                    f"🔄 AGENT TRANSFER: {escalation_info['from_agent']} → {escalation_info['to_agent']}", 
-                    'agent_transfer', 
-                    campaign_id, 
-                    escalation_info
-                )
-        
-        # Log tool calls
-        if hasattr(event, 'actions') and event.actions:
-            if hasattr(event.actions, 'tool_calls') and event.actions.tool_calls:
-                for tool_call in event.actions.tool_calls:
-                    tool_info = {
-                        'agent_name': getattr(event.agent, 'name', 'Unknown') if hasattr(event, 'agent') else 'Unknown',
-                        'tool_name': tool_call.name,
-                        'tool_args': make_json_serializable(tool_call.args) if hasattr(tool_call, 'args') else {},
-                        'timestamp': datetime.datetime.now().isoformat()
-                    }
-                    send_debug_message(
-                        f"🔧 TOOL CALL: {tool_call.name} by {tool_info['agent_name']}", 
-                        'tool_call', 
-                        campaign_id, 
-                        tool_info
-                    )
-        
-        # Log tool results
-        if hasattr(event, 'actions') and event.actions:
-            if hasattr(event.actions, 'tool_results') and event.actions.tool_results:
-                for tool_result in event.actions.tool_results:
-                    result_info = {
-                        'tool_name': tool_result.name if hasattr(tool_result, 'name') else 'Unknown',
-                        'result': make_json_serializable(tool_result.result) if hasattr(tool_result, 'result') else None,
-                        'error': make_json_serializable(tool_result.error) if hasattr(tool_result, 'error') else None,
-                        'timestamp': datetime.datetime.now().isoformat()
-                    }
-                    status = "✅ SUCCESS" if not result_info['error'] else "❌ ERROR"
-                    send_debug_message(
-                        f"{status} TOOL RESULT: {result_info['tool_name']}", 
-                        'tool_result', 
-                        campaign_id, 
-                        result_info
-                    )
-        
-        # Log final responses
-        if event.is_final_response():
-            response_info = {
-                'agent_name': getattr(event.agent, 'name', 'Unknown') if hasattr(event, 'agent') else 'Unknown',
-                'response_length': len(event.content.parts[0].text) if event.content and event.content.parts else 0,
-                'timestamp': datetime.datetime.now().isoformat()
-            }
-            send_debug_message(
-                f"📤 FINAL RESPONSE: {response_info['agent_name']} ({response_info['response_length']} chars)", 
-                'final_response', 
-                campaign_id, 
-                response_info
-            )
-        
-        # Log any errors
-        if hasattr(event, 'error') and event.error:
-            error_info = {
-                'agent_name': getattr(event.agent, 'name', 'Unknown') if hasattr(event, 'agent') else 'Unknown',
-                'error_message': str(event.error),
-                'error_type': type(event.error).__name__,
-                'timestamp': datetime.datetime.now().isoformat()
-            }
-            send_debug_message(
-                f"💥 AGENT ERROR: {error_info['agent_name']} - {error_info['error_message']}", 
-                'agent_error', 
-                campaign_id, 
-                error_info
-            )
-            
-    except Exception as e:
-        print(f"Error in log_agent_event: {e}")
-        send_debug_message(f"Debug logging error: {str(e)}", 'error', campaign_id)
-
-@sock.route('/debug-stream/<campaign_id>')
-def debug_stream(ws, campaign_id):
-    """WebSocket endpoint for streaming debug output."""
-    debug_subscribers.add(ws)
-    send_debug_message(f"Debug stream connected for campaign {campaign_id}", 'info', campaign_id)
-    
-    try:
-        while True:
-            # Keep connection alive
-            ws.receive()
-    except Exception as e:
-        print(f"Debug WebSocket error: {e}")
-    finally:
-        debug_subscribers.discard(ws)
-        send_debug_message(f"Debug stream disconnected for campaign {campaign_id}", 'warning', campaign_id)
-
-def initialize_new_campaign_in_db():
+def initialize_new_campaign_in_db(campaign_id=None):
     print("BACKEND: GM Agent is creating a new campaign...")
-    new_id = str(uuid.uuid4())[:8] # Generate a simple unique ID
-    send_debug_message(f"Creating new campaign with ID: {new_id}", 'info')
-    db_utils.create_campaign(new_id)
-    send_debug_message(f"Campaign {new_id} created successfully in database", 'info')
-    return new_id
+    if campaign_id is None:
+        campaign_id = str(uuid.uuid4())[:8] # Generate a simple unique ID
+    db_utils.create_campaign(campaign_id)
+    return campaign_id
 
 def load_campaign_from_db(campaign_id):
     print(f"BACKEND: Looking up campaign '{campaign_id}' in Firestore...")
@@ -220,14 +77,16 @@ async def initialize_agent_for_new_campaign(campaign_id: str):
     from google.adk.runners import Runner
     from google.genai import types
     
-    send_debug_message(f"Initializing root agent for new campaign {campaign_id}", 'agent_transfer')
-    
     # Set up the session and runner using global session service
+    session_id = f"session_{campaign_id}"
     session = await session_service.create_session(
         app_name="dungeon_master",
         user_id="user_1",
-        session_id=f"session_{campaign_id}",
+        session_id=session_id,
     )
+    
+    # Track the session
+    add_session_to_tracking(session_id)
 
     runner = Runner(
         agent=root_agent,
@@ -237,10 +96,11 @@ async def initialize_agent_for_new_campaign(campaign_id: str):
 
     # Create a message that instructs the agent to start a new campaign
     new_campaign_instruction = f"""
-NEW CAMPAIGN STARTUP: A new campaign has been created with campaign_id: {campaign_id}
+start new campaign
 
-The campaign has been created in the database and is ready for you to manage.
-Please immediately begin the character creation process by routing to the Character Creation Agent.
+A new campaign has been created with campaign_id: {campaign_id}
+
+Please begin the NEW CAMPAIGN STARTUP workflow immediately.
 """
 
     content = types.Content(
@@ -248,24 +108,55 @@ Please immediately begin the character creation process by routing to the Charac
         parts=[types.Part(text=new_campaign_instruction)]
     )
 
-    send_debug_message(f"Sending new campaign instruction to root agent", 'console')
-
     # Run the agent workflow to start the new campaign
     async for event in runner.run_async(
         user_id="user_1", 
-        session_id=f"session_{campaign_id}", 
+        session_id=session_id, 
         new_message=content
     ):
-        # Enhanced debug logging for agent events during initialization
-        log_agent_event(event, campaign_id)
-        
         if event.is_final_response():
             if event.content and event.content.parts:
                 final_response = event.content.parts[0].text
                 print(f"[Root Agent] New campaign {campaign_id} started: {final_response}")
-                send_debug_message(f"Root agent completed new campaign initialization", 'agent_transfer', campaign_id)
                 return final_response
         break
+
+@app.route('/start-new-campaign', methods=['POST'])
+def start_new_campaign():
+    """
+    API endpoint to start a new campaign by invoking the root agent directly.
+    This bypasses the Flask app creation and goes straight to the ADK console.
+    """
+    import asyncio
+    from flask import request
+    
+    data = request.get_json()
+    campaign_id = data.get('campaign_id')
+    
+    if not campaign_id:
+        return jsonify({"status": "error", "message": "Campaign ID is required"}), 400
+    
+    try:
+        # Create the campaign in the database first
+        initialize_new_campaign_in_db(campaign_id)
+        
+        # Initialize the root agent with the new campaign
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        agent_response = loop.run_until_complete(initialize_agent_for_new_campaign(campaign_id))
+        loop.close()
+        
+        return jsonify({
+            "status": "success", 
+            "campaign_id": campaign_id,
+            "agent_response": agent_response
+        })
+    except Exception as e:
+        print(f"Error starting new campaign: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 @app.route('/new-campaign', methods=['POST'])
 def new_campaign():
@@ -288,17 +179,15 @@ def new_campaign():
         return jsonify({
             "status": "success", 
             "campaign_id": campaign_id,
-            "agent_response": agent_response,
-            "adk_url": get_adk_web_url(campaign_id)
+            "agent_response": agent_response
         })
     except Exception as e:
         print(f"Error initializing agent for new campaign: {e}")
         return jsonify({
             "status": "success", 
             "campaign_id": campaign_id,
-            "agent_response": "Campaign created but agent initialization failed",
-            "adk_url": get_adk_web_url(campaign_id)
-        })
+            "agent_response": "Campaign created but agent initialization failed"
+        }), 500
 
 @app.route('/campaign/<string:campaign_id>/characters', methods=['GET'])
 def get_campaign_characters(campaign_id):
@@ -420,11 +309,15 @@ async def initialize_agent_with_campaign(campaign_id: str, campaign_data: dict):
     from google.genai import types
     
     # Set up the session and runner using global session service
+    session_id = f"session_{campaign_id}"
     session = await session_service.create_session(
         app_name="dungeon_master",
         user_id="user_1",
-        session_id=f"session_{campaign_id}",
+        session_id=session_id,
     )
+    
+    # Track the session
+    add_session_to_tracking(session_id)
 
     runner = Runner(
         agent=root_agent,
@@ -500,14 +393,10 @@ IMPORTANT: Provide a brief summary of the campaign so far as your first response
         session_id=f"session_{campaign_id}", 
         new_message=content
     ):
-        # Enhanced debug logging for agent events during campaign loading
-        log_agent_event(event, campaign_id)
-        
         if event.is_final_response():
             if event.content and event.content.parts:
                 final_response = event.content.parts[0].text
                 print(f"[Root Agent] Campaign {campaign_id} loaded: {final_response}")
-                send_debug_message(f"Root agent completed campaign loading", 'agent_transfer', campaign_id)
                 return final_response
             break
 
@@ -537,8 +426,7 @@ def load_campaign(campaign_id):
             "status": "success",
             "campaign_id": campaign_id,
             "campaign_data": campaign_data,
-            "agent_response": agent_response,
-            "adk_url": get_adk_web_url(campaign_id)
+            "agent_response": agent_response
         })
     except Exception as e:
         print(f"Error initializing agent with campaign data: {e}")
@@ -546,9 +434,8 @@ def load_campaign(campaign_id):
             "status": "success",
             "campaign_id": campaign_id,
             "campaign_data": campaign_data,
-            "agent_response": "Campaign loaded but agent initialization failed",
-            "adk_url": get_adk_web_url(campaign_id)
-        })
+            "agent_response": "Campaign loaded but agent initialization failed"
+        }), 500
 
 @app.route('/initialize-campaign', methods=['POST'])
 def initialize_campaign():
@@ -568,12 +455,6 @@ def initialize_campaign():
         # Check if campaign exists
         campaign_data = load_campaign_from_db(campaign_id)
         campaign_data = make_json_serializable(campaign_data)
-        
-        if not campaign_data or 'error' in campaign_data:
-            # Campaign doesn't exist, create a new one
-            initialize_new_campaign_in_db()
-            campaign_data = load_campaign_from_db(campaign_id)
-            campaign_data = make_json_serializable(campaign_data)
         
         # Initialize the agent with campaign data
         loop = asyncio.new_event_loop()
@@ -618,6 +499,7 @@ def initialize_campaign():
 def chat():
     """
     API endpoint to handle chat messages with the agent.
+    Player input is automatically routed to the Player Interface Agent.
     """
     import asyncio
     from flask import request
@@ -632,8 +514,6 @@ def chat():
     if not campaign_id or not message:
         return jsonify({"status": "error", "message": "Campaign ID and message are required"}), 400
     
-    send_debug_message(f"Received chat message: '{message[:50]}{'...' if len(message) > 50 else ''}'", 'api', campaign_id)
-    
     try:
         # Set up the runner using global session service
         runner = Runner(
@@ -642,13 +522,11 @@ def chat():
             session_service=session_service
         )
 
-        # Create the message content
+        # Create the message content - this goes to root_agent which will route to Player Interface Agent
         content = types.Content(
             role='user', 
             parts=[types.Part(text=message)]
         )
-
-        send_debug_message(f"Routing message to root agent", 'agent_transfer', campaign_id)
 
         # Run the agent workflow
         loop = asyncio.new_event_loop()
@@ -662,9 +540,6 @@ def chat():
                 session_id=f"session_{campaign_id}", 
                 new_message=content
             ):
-                # Enhanced debug logging for agent events
-                log_agent_event(event, campaign_id)
-                
                 if event.is_final_response():
                     if event.content and event.content.parts:
                         return event.content.parts[0].text
@@ -673,8 +548,6 @@ def chat():
         agent_response = loop.run_until_complete(run_agent())
         loop.close()
         
-        send_debug_message(f"Root agent response received", 'agent_transfer', campaign_id)
-        
         return jsonify({
             "status": "success",
             "agent_response": agent_response
@@ -682,7 +555,6 @@ def chat():
         
     except Exception as e:
         print(f"Error in chat: {e}")
-        send_debug_message(f"Error in chat: {str(e)}", 'error', campaign_id)
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -694,16 +566,15 @@ def list_sessions():
     API endpoint to list all active sessions.
     """
     try:
-        # Get all sessions from the session service
-        sessions = session_service.list_sessions(app_name="dungeon_master")
-        
         session_list = []
-        for session in sessions:
+        for session_id in active_sessions:
+            # Extract campaign ID from session ID
+            campaign_id = session_id.replace('session_', '') if session_id.startswith('session_') else session_id
+            
             session_info = {
-                'session_id': session.session_id,
-                'user_id': session.user_id,
-                'created_at': session.created_at.isoformat() if hasattr(session, 'created_at') else None,
-                'adk_web_url': get_adk_web_url(session.session_id.replace('session_', ''))
+                'session_id': session_id,
+                'user_id': 'user_1',
+                'created_at': None,  # InMemorySessionService doesn't provide creation time
             }
             session_list.append(session_info)
         
@@ -738,6 +609,9 @@ def delete_session(session_id):
         ))
         loop.close()
         
+        # Remove from active sessions tracking
+        remove_session_from_tracking(session_id)
+        
         return jsonify({
             "status": "success",
             "message": f"Session {session_id} deleted successfully"
@@ -745,6 +619,127 @@ def delete_session(session_id):
         
     except Exception as e:
         print(f"Error deleting session {session_id}: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+# ==============================================================================
+#  SESSION SWITCHING API
+# ==============================================================================
+
+@app.route('/switch-session/<string:campaign_id>', methods=['POST'])
+def switch_session(campaign_id):
+    """
+    API endpoint to manually switch to a specific session for a campaign.
+    """
+    from flask import request
+    
+    data = request.get_json() or {}
+    session_id = data.get('session_id')
+    agent_name = data.get('agent_name', 'Unknown')
+    
+    if not session_id:
+        return jsonify({
+            "status": "error",
+            "message": "Session ID is required"
+        }), 400
+    
+    try:
+        return jsonify({
+            "status": "success",
+            "session_id": session_id,
+            "agent_name": agent_name
+        })
+        
+    except Exception as e:
+        print(f"Error switching session: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/get-current-session/<string:campaign_id>', methods=['GET'])
+def get_current_session(campaign_id):
+    """
+    API endpoint to get the current active session for a campaign.
+    """
+    try:
+        # For now, return the root agent session
+        # In the future, this could track the currently active session
+        session_id = f"session_{campaign_id}"
+        
+        return jsonify({
+            "status": "success",
+            "campaign_id": campaign_id,
+            "session_id": session_id,
+            "agent_name": "Root Agent"
+        })
+        
+    except Exception as e:
+        print(f"Error getting current session: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/get-available-sessions/<string:campaign_id>', methods=['GET'])
+def get_available_sessions(campaign_id):
+    """
+    API endpoint to get all available sessions for a campaign.
+    """
+    try:
+        # Get all sessions for this campaign
+        campaign_sessions = []
+        
+        # Add the root agent session
+        root_session_id = f"session_{campaign_id}"
+        if root_session_id in active_sessions:
+            campaign_sessions.append({
+                'session_id': root_session_id,
+                'agent_name': 'Root Agent',
+                'agent_type': 'root',
+                'description': 'Main campaign coordinator and orchestrator'
+            })
+        
+        # Add any sub-agent sessions that match this campaign
+        for session_id in active_sessions:
+            if session_id.startswith(f"sub_agent_") and f"_{campaign_id}_" in session_id:
+                # Extract agent name from session ID
+                # Format: sub_agent_{agent_name}_{campaign_id}_{timestamp}
+                parts = session_id.split('_')
+                if len(parts) >= 4:
+                    agent_name = parts[2].replace('_', ' ').title()
+                    agent_type = parts[2]
+                    
+                    # Map agent types to descriptions
+                    agent_descriptions = {
+                        'character_creation': 'Handles character creation and customization',
+                        'narrative': 'Manages story elements and environmental descriptions',
+                        'rules_lawyer': 'Handles combat mechanics and rules questions',
+                        'npc': 'Manages NPC dialogue and roleplay',
+                        'campaign_creation': 'Creates campaign outlines and story structure',
+                        'player_interface': 'Handles direct player communication'
+                    }
+                    
+                    description = agent_descriptions.get(agent_type, f'Specialized agent for {agent_name.lower()} tasks')
+                    
+                    campaign_sessions.append({
+                        'session_id': session_id,
+                        'agent_name': agent_name,
+                        'agent_type': agent_type,
+                        'description': description
+                    })
+        
+        return jsonify({
+            "status": "success",
+            "campaign_id": campaign_id,
+            "sessions": campaign_sessions,
+            "total_sessions": len(campaign_sessions)
+        })
+        
+    except Exception as e:
+        print(f"Error getting available sessions: {e}")
         return jsonify({
             "status": "error",
             "message": str(e)

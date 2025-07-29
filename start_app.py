@@ -46,12 +46,6 @@ def start_flask_app():
     except Exception as e:
         print(f"❌ Error starting Flask server: {e}")
 
-def start_adk_web():
-    """Start the ADK web interface (DEPRECATED - now using custom chat interface)."""
-    global adk_process
-    print("🌐 ADK web interface is no longer needed - using custom chat interface")
-    print("✅ Chat interface will be available at http://localhost:5001")
-
 def check_ports():
     """Check if port 5001 is available."""
     import socket
@@ -105,10 +99,6 @@ def main():
     # Wait a moment for Flask to start
     time.sleep(2)
     
-    # Note: ADK web interface is no longer needed
-    start_adk_web()
-    
-    print()
     print("🎉 All services started successfully!")
     print("=" * 50)
     print("🌐 Web Interface: http://localhost:5001")

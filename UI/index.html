@@ -98,19 +98,32 @@
         // Event listener for the "New Campaign" button
         newCampaignBtn.addEventListener('click', () => {
             messageArea.textContent = 'Starting a new campaign...';
-            fetch('/new-campaign', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    messageArea.textContent = `New campaign created! ID: ${data.campaign_id}`;
-                    // Redirect to the campaign interface
-                    setTimeout(() => {
-                        window.location.href = `/campaign?campaign_id=${data.campaign_id}`;
-                    }, 1500); // Give user time to see the success message
+            
+            // Generate a unique campaign ID
+            const campaignId = Math.random().toString(36).substring(2, 10);
+            
+            // Trigger the root agent with "start new campaign" prompt
+            fetch('/start-new-campaign', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    campaign_id: campaignId
                 })
-                .catch(error => {
-                    console.error('Error:', error);
-                    messageArea.textContent = 'Error starting new campaign.';
-                });
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageArea.textContent = `New campaign created! ID: ${campaignId}`;
+                // Redirect to the campaign interface
+                setTimeout(() => {
+                    window.location.href = `/campaign?campaign_id=${campaignId}`;
+                }, 1500); // Give user time to see the success message
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                messageArea.textContent = 'Error starting new campaign.';
+            });
         });
 
         // Event listener for the "Load Campaign" button

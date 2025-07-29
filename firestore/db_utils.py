@@ -54,7 +54,7 @@ def create_campaign(campaign_id: str, status: str = 'active') -> str:
     })
         
     # Create sub-collections
-    sub_collections = ['characters', 'npcs', 'monsters', 'locations', 'quests', 'notes']
+    sub_collections = ['context', 'last_saved', 'characters', 'npcs', 'monsters']
         
     for sub_collection in sub_collections:
         init_doc = campaign_ref.collection(sub_collection).document('_init')
@@ -88,12 +88,11 @@ def save_campaign(campaign_id: str, context: str) -> str:
         update_data = {
             'context': context,
             'last_saved': firestore.SERVER_TIMESTAMP,
-            'context_length': len(context)
         }
         
         campaign_ref.update(update_data)
-        print(f"[DatabaseManager] Campaign '{campaign_id}' context updated successfully. Context length: {len(context)} characters.")
-        return f"Campaign '{campaign_id}' has been updated successfully with {len(context)} characters of context."
+        print(f"[DatabaseManager] Campaign '{campaign_id}' context updated successfully.")
+        return f"Campaign '{campaign_id}' has been updated successfully."
 
     except Exception as e:
         return f"Error saving campaign '{campaign_id}': {e}"

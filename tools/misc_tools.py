@@ -1,127 +1,29 @@
 import random
-import json
-from typing import Dict, Any, Optional
-import asyncio
-import concurrent.futures
-from google.adk.sessions import FirestoreSessionService
-from google.adk.runners import Runner
-from google.genai import types
+from google.adk.tools.tool_context import ToolContext
+import os
+from google.cloud import firestore
+from google.oauth2 import service_account
 
-# NPC Memory Storage
-_npc_memory: Dict[str, dict] = {}
+# Set up Google Cloud credentials using service account key
+SERVICE_ACCOUNT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "service-account-key.json")
 
-# Global session service for agent communication
-_session_service = None
+# Set the environment variable for Google Cloud credentials
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = SERVICE_ACCOUNT_PATH
 
-def get_session_service():
-    """Get or create the global session service."""
-    global _session_service
-    if _session_service is None:
-        _session_service = FirestoreSessionService()
-    return _session_service
-
-async def run_sub_agent(agent, action_data: Dict[str, Any], campaign_id: str = None) -> str:
-    """
-    Run a sub-agent with the given action data and return the response.
-    Creates a unique session for this interaction and terminates it after completion.
-    
-    Args:
-        agent: The LlmAgent instance to run
-        action_data: Dictionary containing action information
-        campaign_id: Optional campaign ID for session management
-    
-    Returns:
-        The agent's response as a string
-    """
-    session_service = get_session_service()
-    
-    # Create a unique session ID for this agent interaction
-    # Include timestamp to ensure uniqueness even for same agent/campaign combinations
-    import time
-    timestamp = int(time.time())
-    session_id = f"sub_agent_{agent.name}_{campaign_id or 'default'}_{timestamp}"
-    
+def get_db_client():
+    """Initializes and returns a Firestore client."""
     try:
-        # Create session
-        session = await session_service.create_session(
-            app_name="dungeon_master",
-            user_id="root_agent",
-            session_id=session_id,
-        )
-
-        # Create runner for the sub-agent
-        runner = Runner(
-            agent=agent,
-            app_name="dungeon_master",
-            session_service=session_service
-        )
-
-        # Format the action data as a message for the sub-agent
-        action_message = f"""
-ACTION FROM ROOT AGENT:
-Action Type: {action_data.get('action_type', 'unknown')}
-Player Input: {action_data.get('player_input', '')}
-Target: {action_data.get('target', '')}
-Context: {action_data.get('context', '')}
-Campaign ID: {action_data.get('campaign_id', campaign_id or 'unknown')}
-Game State: {action_data.get('game_state', 'unknown')}
-
-Please process this action according to your role and respond appropriately.
-"""
-
-        content = types.Content(
-            role='user', 
-            parts=[types.Part(text=action_message)]
-        )
-
-        # Run the sub-agent
-        response = ""
-        async for event in runner.run_async(
-            user_id="root_agent", 
-            session_id=session_id, 
-            new_message=content
-        ):
-            if event.is_final_response():
-                if event.content and event.content.parts:
-                    response = event.content.parts[0].text
-                break
-        
-        if not response:
-            response = "Sub-agent did not produce a response."
-            
-        return response
-        
+        # Use service account credentials
+        credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_PATH)
+        db = firestore.Client(credentials=credentials)
+        print("[DatabaseManager] Firestore client initialized successfully.")
+        return db
     except Exception as e:
-        return f"Error running sub-agent {agent.name}: {str(e)}"
-    finally:
-        # CRITICAL: Always terminate the sub-agent session after completion
-        try:
-            await session_service.delete_session(
-                app_name="dungeon_master",
-                user_id="root_agent",
-                session_id=session_id
-            )
-        except Exception as e:
-            # Log the error but don't fail the main operation
-            print(f"Warning: Failed to delete sub-agent session {session_id}: {str(e)}")
+        print(f"[DatabaseManager] FATAL: Could not initialize Firestore client: {e}")
+        print(f"[DatabaseManager] Please ensure the service account key file exists at: {SERVICE_ACCOUNT_PATH}")
+        return None
 
-def run_sub_agent_sync(agent, action_data: Dict[str, Any], campaign_id: str = None) -> str:
-    """
-    Synchronous wrapper for run_sub_agent.
-    """
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If we're already in an async context, we need to create a new task
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, run_sub_agent(agent, action_data, campaign_id))
-                return future.result()
-        else:
-            return asyncio.run(run_sub_agent(agent, action_data, campaign_id))
-    except RuntimeError:
-        # If no event loop is running, create one
-        return asyncio.run(run_sub_agent(agent, action_data, campaign_id))
-
+db_ = get_db_client()
 
 def roll_dice(dice_notation: str) -> str:
     """
@@ -174,296 +76,121 @@ def roll_dice(dice_notation: str) -> str:
             
     except (ValueError, IndexError) as e:
         return f"Error parsing dice notation '{dice_notation}': {e}"
-
-def store_npc_in_memory(campaign_id: str, npc_name: str, npc_data: dict) -> str:
+    
+def set_game_state(new_state: str, tool_context: ToolContext) -> bool:
     """
-    Store an NPC's data in memory for quick access during conversations.
-    
-    Args:
-        campaign_id: str - The campaign ID
-        npc_name: str - The NPC's name
-        npc_data: dict - The NPC's complete data
-    
-    Returns:
-        str - Success or error message
+    Set the game state.
     """
     try:
-        memory_key = f"{campaign_id}:{npc_name.lower()}"
-        _npc_memory[memory_key] = npc_data
-        print(f"[NPCMemory] Stored NPC '{npc_name}' in memory for campaign '{campaign_id}'")
-        return f"NPC '{npc_name}' has been stored in memory for quick access."
+      tool_context.state['game_state'] = new_state
+      print(f"Game state set to {new_state}")
+      return True
     except Exception as e:
-        return f"Error storing NPC '{npc_name}' in memory: {e}"
+      print(f"Error setting game state: {e}")
+      return False
+    
 
-def get_npc_from_memory(campaign_id: str, npc_name: str) -> Optional[dict]:
-    """
-    Retrieve an NPC's data from memory.
-    
-    Args:
-        campaign_id: str - The campaign ID
-        npc_name: str - The NPC's name
-    
-    Returns:
-        dict or None - The NPC data if found in memory, None otherwise
-    """
-    memory_key = f"{campaign_id}:{npc_name.lower()}"
-    npc_data = _npc_memory.get(memory_key)
-    if npc_data:
-        print(f"[NPCMemory] Retrieved NPC '{npc_name}' from memory for campaign '{campaign_id}'")
-    return npc_data
+def create_campaign(campaign_id: str, tool_context: ToolContext) -> dict:
+  """
+  Creates a new entry for a campaign in the 'campaigns' collection in the database.
 
-def clear_npc_memory(campaign_id: str = None, npc_name: str = None) -> str:
-    """
-    Clear NPC memory, optionally for a specific campaign or NPC.
+  Args:
+      campaign_id: str - Unique identifier for the campaign
+  """
+  if not db_:
+      return {'action': 'create_campaign', 'created': False, 'message': "Error: Database client is not available."}
+      
+  # Create the campaign document
+  campaign_ref = db_.collection('campaigns').document(campaign_id)
+  campaign_ref.set({
+      'id': campaign_id,
+      'created_date': firestore.SERVER_TIMESTAMP
+  })
+      
+  # Create sub-collections
+  sub_collections = ['context', 'last_saved', 'characters', 'npcs', 'monsters', 'campaign_outline']
+      
+  for sub_collection in sub_collections:
+      init_doc = campaign_ref.collection(sub_collection).document('_init')
+      init_doc.set({
+          'created': True,
+          'campaign_id': campaign_id,
+          'campaign_outline': tool_context.state['campaign_outline']
+      })
+      
+  print(f"[DatabaseManager] Campaign '{campaign_id}' created successfully with {len(sub_collections)} sub-collections.")
+  return {'action': 'create_campaign', 'created': True, 'message': f"Campaign '{campaign_id}' has been created successfully."}
     
+
+def save_campaign(campaign_id: str, context: str, tool_context: ToolContext) -> dict:
+    """
+    Saves/updates a campaign to the 'campaigns' collection in Firestore.
     Args:
-        campaign_id: str - Optional campaign ID to clear specific campaign's NPCs
-        npc_name: str - Optional NPC name to clear specific NPC
-    
-    Returns:
-        str - Success message
+        campaign_id: str - The ID of the campaign to save.
+        context: str - The context of the campaign. This is a freeform summary of the main events of the campaign so far.
     """
-    global _npc_memory
-    
-    if campaign_id and npc_name:
-        # Clear specific NPC
-        memory_key = f"{campaign_id}:{npc_name.lower()}"
-        if memory_key in _npc_memory:
-            del _npc_memory[memory_key]
-            return f"Cleared NPC '{npc_name}' from memory for campaign '{campaign_id}'"
+    if not db_:
+        return {'action': 'save_campaign', 'updated': False, 'message': "Error: Database client is not available."}
+
+    try:
+        campaign_ref = db_.collection('campaigns').document(campaign_id)
+        
+        # Check if campaign exists
+        campaign_doc = campaign_ref.get()
+        if not campaign_doc.exists:
+            return f"Error: Campaign '{campaign_id}' not found."
+        
+        # Update the campaign with context and timestamp
+        update_data = {
+            'context': context,
+            'last_saved': firestore.SERVER_TIMESTAMP,
+            'state': tool_context.state
+        }
+        
+        campaign_ref.update(update_data)
+        print(f"[DatabaseManager] Campaign '{campaign_id}' context updated successfully")
+        return {'action': 'save_campaign', 'updated': True, 'message': f"Campaign '{campaign_id}' has been updated successfully with {len(context)} characters of context."}
+
+    except Exception as e:
+        return {'action': 'save_campaign', 'updated': False, 'message': f"Error saving campaign '{campaign_id}': {e}"}
+
+def load_campaign(campaign_id: str) -> dict:
+    """
+    Loads a campaign by its ID. This includes the context, characters, npcs, monsters, locations, quests, and notes.
+    Args:
+        campaign_id: str - The ID of the campaign to load.
+    """
+    if not db_:
+        return {"error": "Database client is not available."}
+
+    try:
+        campaign_ref = db_.collection('campaigns').document(campaign_id)
+        campaign_doc = campaign_ref.get()
+        
+        if campaign_doc.exists:
+            campaign_data = campaign_doc.to_dict()
+            
+            # Load all sub-collections
+            sub_collections = ['characters', 'npcs', 'monsters', 'locations', 'quests', 'notes']
+            
+            for sub_collection in sub_collections:
+                try:
+                    docs = campaign_ref.collection(sub_collection).stream()
+                    collection_data = []
+                    for doc in docs:
+                        if doc.id != '_init':  # Skip the initialization document
+                            doc_data = doc.to_dict()
+                            doc_data['_id'] = doc.id
+                            collection_data.append(doc_data)
+                    campaign_data[sub_collection] = collection_data
+                except Exception as e:
+                    print(f"[DatabaseManager] Warning: Could not load {sub_collection} for campaign {campaign_id}: {e}")
+                    campaign_data[sub_collection] = []
+            
+            print(f"[DatabaseManager] Campaign '{campaign_data.get('name', campaign_id)}' loaded successfully with all sub-collections.")
+            return {'action': 'load_campaign', 'loaded': True, 'message': f"Campaign '{campaign_data.get('name', campaign_id)}' loaded successfully with all sub-collections."}
         else:
-            return f"NPC '{npc_name}' not found in memory for campaign '{campaign_id}'"
-    elif campaign_id:
-        # Clear all NPCs for specific campaign
-        keys_to_remove = [key for key in _npc_memory.keys() if key.startswith(f"{campaign_id}:")]
-        for key in keys_to_remove:
-            del _npc_memory[key]
-        return f"Cleared {len(keys_to_remove)} NPCs from memory for campaign '{campaign_id}'"
-    else:
-        # Clear all NPC memory
-        count = len(_npc_memory)
-        _npc_memory.clear()
-        return f"Cleared all {count} NPCs from memory"
-
-def list_npcs_in_memory(campaign_id: str = None) -> dict:
-    """
-    List all NPCs currently stored in memory.
-    
-    Args:
-        campaign_id: str - Optional campaign ID to list only that campaign's NPCs
-    
-    Returns:
-        dict - List of NPCs in memory
-    """
-    if campaign_id:
-        campaign_npcs = {key: value for key, value in _npc_memory.items() 
-                        if key.startswith(f"{campaign_id}:")}
-        return {
-            "npcs": list(campaign_npcs.keys()),
-            "count": len(campaign_npcs),
-            "campaign_id": campaign_id
-        }
-    else:
-        return {
-            "npcs": list(_npc_memory.keys()),
-            "count": len(_npc_memory),
-            "all_campaigns": True
-        }
-
-
-def route_action_to_root_agent(action_data: Dict[str, Any]) -> str:
-    """
-    Route a structured action from the Player Interface Agent to the Root Agent.
-    
-    Args:
-        action_data: Dictionary containing action information
-            - action_type: Type of action (dialogue, combat, exploration, etc.)
-            - player_input: Original player message
-            - target: Target of the action (NPC name, monster, location, etc.)
-            - context: Additional context about the situation
-            - game_state: Current game state if known
-    
-    Returns:
-        Confirmation message that action was routed
-    """
-    # This function will be called by the Player Interface Agent
-    # The actual routing logic will be handled by the system
-    action_type = action_data.get("action_type", "unknown")
-    player_input = action_data.get("player_input", "")
-    target = action_data.get("target", "")
-    
-    return f"Action routed to Root Agent: {action_type} action targeting {target}"
-
-
-def route_to_narrative_agent(action_data: Dict[str, Any]) -> str:
-    """
-    Route an action from the Root Agent to the Narrative Agent.
-    
-    Args:
-        action_data: Dictionary containing action information
-            - action_type: Type of action (exploration, combat_description, etc.)
-            - player_input: Original player message
-            - target: Target of the action
-            - context: Additional context about the situation
-            - game_state: Current game state
-            - campaign_id: Campaign identifier
-    
-    Returns:
-        Response from the Narrative Agent
-    """
-    try:
-        from agents.sub_agents import narrative_agent
-        campaign_id = action_data.get('campaign_id', 'default')
-        response = run_sub_agent_sync(narrative_agent, action_data, campaign_id)
-        return response
+            return {"error": f"Campaign with ID '{campaign_id}' not found."}
     except Exception as e:
-        return f"Error routing to Narrative Agent: {str(e)}"
-
-
-def route_to_rules_lawyer_agent(action_data: Dict[str, Any]) -> str:
-    """
-    Route an action from the Root Agent to the Rules Lawyer Agent.
+        return {"error": f"Error loading campaign '{campaign_id}': {e}"}
     
-    Args:
-        action_data: Dictionary containing action information
-            - action_type: Type of action (combat, skill_check, rules_question, etc.)
-            - player_input: Original player message
-            - target: Target of the action
-            - context: Additional context about the situation
-            - game_state: Current game state
-            - campaign_id: Campaign identifier
-    
-    Returns:
-        Response from the Rules Lawyer Agent
-    """
-    try:
-        from agents.sub_agents import rules_lawyer_agent
-        campaign_id = action_data.get('campaign_id', 'default')
-        response = run_sub_agent_sync(rules_lawyer_agent, action_data, campaign_id)
-        return response
-    except Exception as e:
-        return f"Error routing to Rules Lawyer Agent: {str(e)}"
-
-
-def route_to_npc_agent(action_data: Dict[str, Any]) -> str:
-    """
-    Route an action from the Root Agent to the NPC Agent.
-    
-    Args:
-        action_data: Dictionary containing action information
-            - action_type: Type of action (dialogue, question, interaction, etc.)
-            - player_input: Original player message
-            - target: NPC name or identifier
-            - context: Additional context about the situation
-            - game_state: Current game state
-            - campaign_id: Campaign identifier
-    
-    Returns:
-        Response from the NPC Agent
-    """
-    try:
-        from agents.sub_agents import npc_agent
-        campaign_id = action_data.get('campaign_id', 'default')
-        response = run_sub_agent_sync(npc_agent, action_data, campaign_id)
-        return response
-    except Exception as e:
-        return f"Error routing to NPC Agent: {str(e)}"
-
-
-def route_to_character_creation_agent(action_data: Dict[str, Any]) -> str:
-    """
-    Route an action from the Root Agent to the Character Creation Agent.
-    
-    Args:
-        action_data: Dictionary containing action information
-            - action_type: Type of action (character_creation, etc.)
-            - player_input: Original player message
-            - context: Additional context about the situation
-            - campaign_id: Campaign identifier
-    
-    Returns:
-        Response from the Character Creation Agent
-    """
-    try:
-        from agents.sub_agents import character_creation_agent
-        campaign_id = action_data.get('campaign_id', 'default')
-        response = run_sub_agent_sync(character_creation_agent, action_data, campaign_id)
-        return response
-    except Exception as e:
-        return f"Error routing to Character Creation Agent: {str(e)}"
-
-
-def route_to_campaign_creation_agent(action_data: Dict[str, Any]) -> str:
-    """
-    Route an action from the Root Agent to the Campaign Creation Agent.
-    
-    Args:
-        action_data: Dictionary containing action information
-            - action_type: Type of action (campaign_outline, etc.)
-            - player_input: Original player message
-            - context: Additional context about the situation
-            - campaign_id: Campaign identifier
-    
-    Returns:
-        Response from the Campaign Creation Agent
-    """
-    try:
-        from agents.sub_agents import campaign_creation_agent
-        campaign_id = action_data.get('campaign_id', 'default')
-        response = run_sub_agent_sync(campaign_creation_agent, action_data, campaign_id)
-        return response
-    except Exception as e:
-        return f"Error routing to Campaign Creation Agent: {str(e)}"
-
-
-def route_to_player_interface_agent(action_data: Dict[str, Any]) -> str:
-    """
-    Route an action from the Root Agent to the Player Interface Agent.
-    
-    Args:
-        action_data: Dictionary containing action information
-            - action_type: Type of action (player_communication, etc.)
-            - player_input: Original player message
-            - context: Additional context about the situation
-            - campaign_id: Campaign identifier
-    
-    Returns:
-        Response from the Player Interface Agent
-    """
-    try:
-        from agents.sub_agents import player_interface_agent
-        campaign_id = action_data.get('campaign_id', 'default')
-        response = run_sub_agent_sync(player_interface_agent, action_data, campaign_id)
-        return response
-    except Exception as e:
-        return f"Error routing to Player Interface Agent: {str(e)}"
-
-
-
-
-
-def send_response_to_root_agent(response_data: Dict[str, Any]) -> str:
-    """
-    Send a response from a sub-agent back to the Root Agent.
-    
-    Args:
-        response_data: Dictionary containing response information
-            - agent_type: Type of agent sending the response (narrative, rules_lawyer, npc)
-            - response_content: The actual response content
-            - action_type: Type of action this is responding to
-            - context: Additional context about the response
-            - campaign_id: Campaign identifier
-    
-    Returns:
-        Confirmation message that response was sent
-    """
-    # This function will be called by sub-agents
-    # The actual routing logic will be handled by the system
-    agent_type = response_data.get("agent_type", "unknown")
-    action_type = response_data.get("action_type", "unknown")
-    
-    return f"Response sent from {agent_type} agent to Root Agent for {action_type} action"
-
-
-if __name__ == "__main__":
-  print(roll_dice("d20", 3))
