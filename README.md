@@ -2,7 +2,17 @@
 
 An AI-powered Dungeons & Dragons game master that uses Google's Agent Development Kit (ADK) to create immersive tabletop RPG experiences.
 
-## Features
+## 🎯 Project Overview
+
+This project demonstrates advanced AI agent orchestration, multi-agent systems, and real-time game mechanics. Built with modern Python technologies including Google ADK, Firebase Firestore, and Flask, it showcases:
+
+- **Multi-Agent Architecture**: Hierarchical agent system with specialized roles
+- **Real-time Game Mechanics**: Combat resolution, character creation, and story generation
+- **Persistent State Management**: Firebase integration for campaign persistence
+- **Modern Web Interface**: Responsive Flask-based UI
+- **Comprehensive Testing**: Extensive test suite covering all major functionality
+
+## 🚀 Features
 
 - **Multi-Agent System**: Specialized agents for different aspects of D&D gameplay
 - **Character Creation**: Guided character creation with all D&D 5e options
@@ -12,13 +22,13 @@ An AI-powered Dungeons & Dragons game master that uses Google's Agent Developmen
 - **Story Generation**: AI-driven narrative and environmental descriptions
 - **Custom UI**: Web-based interface for seamless gameplay experience
 
-## Quick Start
+## 🛠️ Quick Start
 
 ### Prerequisites
 
 1. **Python 3.8+** installed
 2. **Google ADK** installed: `pip install google-adk`
-3. **Firebase/Firestore** project set up with service account key
+3. **Firebase/Firestore** project set up
 4. **Google Cloud** credentials configured
 
 ### Installation
@@ -34,9 +44,11 @@ An AI-powered Dungeons & Dragons game master that uses Google's Agent Developmen
    pip install -r requirements.txt
    ```
 
-3. **Set up configuration**:
-   - Place your Firebase service account key in `config/service-account-key.json`
-   - Ensure `adk.yaml` is in the project root
+3. **Set up Firebase credentials**:
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Generate a service account key in Project Settings > Service Accounts
+   - Replace the template in `config/service-account-key.json` with your actual credentials
+   - **⚠️ Never commit real credentials to version control**
 
 4. **Initialize the database**:
    ```bash
@@ -73,7 +85,7 @@ adk web .
 4. **Interact with your AI Dungeon Master** through the web interface
 5. **Create characters, explore, and battle** in your custom D&D world
 
-## Architecture
+## 🏗️ Architecture
 
 ### Agent Hierarchy
 
@@ -107,7 +119,7 @@ Root Agent (Orchestrator)
 4. **Response Coordination** → Root Agent coordinates multiple responses if needed
 5. **Player Output** → Final response delivered to player
 
-## Configuration
+## ⚙️ Configuration
 
 ### Model Configuration
 
@@ -133,7 +145,20 @@ The application uses Firebase Firestore for persistent storage:
 - **Locations**: World locations and descriptions
 - **Quests**: Active quests and objectives
 
-## Development
+## 🧪 Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_character_creation.py
+
+# Run with coverage
+pytest --cov=.
+```
 
 ### Adding New Tools
 
@@ -171,7 +196,7 @@ The application uses Firebase Firestore for persistent storage:
 
 4. **Update root agent** to include the new agent and routing tool
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
 ### Common Issues
 
@@ -211,37 +236,37 @@ python UI/app.py
 
 This will provide detailed logging of agent interactions, tool calls, and session management.
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 dungeon_master/
-├── agents/                    # Agent definitions and instructions
-│   ├── agent.py              # Root agent configuration
-│   ├── sub_agents.py         # Specialist agent definitions
-│   ├── config_loader.py      # Model configuration loading
-│   └── instructions/         # Agent instruction files
-├── tools/                    # Tool implementations
-│   ├── character_data.py     # Character creation tools
-│   ├── campaign_outline.py   # Campaign management tools
-│   ├── game_mechanics.py     # Combat and rules tools
-│   ├── misc_tools.py         # Routing and utility tools
-│   └── ...                   # Other specialized tools
-├── firestore/                # Database utilities
-│   ├── database_manager.py   # Database operations
-│   └── db_utils.py          # Database utility functions
-├── UI/                       # Web interface
-│   ├── app.py               # Flask application
-│   ├── index.html           # Main page
-│   └── campaign.html        # Campaign interface
-├── config/                   # Configuration files
+├── root_agent/                 # Agent definitions and instructions
+│   ├── agent.py               # Root agent configuration
+│   ├── sub_agents.py          # Specialist agent definitions
+│   ├── config_loader.py       # Model configuration loading
+│   └── instructions/          # Agent instruction files
+├── tools/                     # Tool implementations
+│   ├── character_data.py      # Character creation tools
+│   ├── campaign_outline.py    # Campaign management tools
+│   ├── game_mechanics.py      # Combat and rules tools
+│   ├── misc_tools.py          # Routing and utility tools
+│   └── ...                    # Other specialized tools
+├── firestore/                 # Database utilities
+│   ├── database_manager.py    # Database operations
+│   └── db_utils.py           # Database utility functions
+├── UI/                        # Web interface
+│   ├── app.py                # Flask application
+│   ├── index.html            # Main page
+│   └── campaign.html         # Campaign interface
+├── config/                    # Configuration files
 │   └── service-account-key.json
-├── tests/                    # Test files
-├── adk.yaml                 # ADK configuration with agent models
-├── start_app.py             # Application startup script
-└── README.md                # This file
+├── tests/                     # Test files
+├── adk.yaml                  # ADK configuration with agent models
+├── start_app.py              # Application startup script
+└── README.md                 # This file
 ```
 
-## Contributing
+## 🤝 Contributing
 
 1. **Fork the repository**
 2. **Create a feature branch**
@@ -249,6 +274,13 @@ dungeon_master/
 4. **Add tests** for new functionality
 5. **Submit a pull request**
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🔒 Security Notes
+
+- **Never commit real Firebase credentials** to version control
+- The `config/service-account-key.json` file contains a template - replace with your actual credentials
+- Ensure your `.gitignore` properly excludes sensitive files
+- Use environment variables for production deployments
