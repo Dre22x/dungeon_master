@@ -12,6 +12,7 @@ from root_agent.agent import root_agent
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types
+from utils import run_agent_with_retry
 
 async def test_agent_transfer():
     """Test that the root agent properly transfers to character creation agent."""
@@ -44,24 +45,15 @@ async def test_agent_transfer():
     print(f"Sending test message: {test_message}")
     print()
 
-    # Run the agent
-    async for event in runner.run_async(
-        user_id="test_user", 
-        session_id="test_session", 
-        new_message=content
-    ):
-        if hasattr(event, 'agent') and event.agent:
-            print(f"🤖 Agent activated: {event.agent.name}")
-        
-        if hasattr(event, 'actions') and event.actions:
-            if hasattr(event.actions, 'escalate') and event.actions.escalate:
-                print(f"🔄 Agent transfer: {event.actions.escalate.agent_name}")
-        
-        if event.is_final_response():
-            if event.content and event.content.parts:
-                response = event.content.parts[0].text
-                print(f"📤 Final response: {response}")
-            break
+    # Run the agent with retry logic
+    success, response, agent_name = await run_agent_with_retry(
+        runner, "test_user", "test_session", content
+    )
+    
+    if success and response:
+        print(f"📤 Final response: {response}")
+    else:
+        print(f"❌ Error: Failed to get response")
 
     print("\n✅ Test completed!")
 

@@ -13,7 +13,7 @@ from tools.spells import *
 from tools.subraces import *
 from tools.traits import *
 from tools.weapons import *
-from tools.misc_tools import roll_dice
+from tools.misc_tools import roll_dice, get_state, set_state
 from tools.tools import get_starting_equipment
 from firestore.db_utils import *
 from root_agent.config_loader import get_model_for_agent
@@ -39,7 +39,7 @@ narrative_agent = LlmAgent(
   model=get_model_for_agent("narrative_agent"),
   description="You are the world's greatest storyteller, a master of prose and atmosphere. Your purpose is to paint a vivid picture of the world for the players, engaging all their senses. You are to be creative, evocative, and compelling. ",
   instruction=load_instructions("narrative_agent.txt"),
-  tools=[change_game_state]
+  tools=[get_state, set_state] 
 )
 
 npc_agent = LlmAgent(
@@ -55,7 +55,10 @@ rules_lawyer_agent = LlmAgent(
   model=get_model_for_agent("rules_lawyer_agent"),
   description="You are an impartial and highly precise 'Rules Lawyer' for a Dungeons and Dragons 5th Edition game. Your job is to be the ultimate authority on game mechanics. You are logical, factual, and concise. You do not have a personality and you never roleplay. ",
   instruction=load_instructions("rules_lawyer_agent.txt"),
-    tools=[get_spell_details, 
+    tools=[
+        get_state,
+        set_state,
+        get_spell_details, 
            get_all_spells, 
            get_race_details, 
            get_all_races, 
@@ -121,18 +124,9 @@ rules_lawyer_agent = LlmAgent(
            # NPC combat classification tools
            classify_npc_for_combat,
            get_monster_for_npc_classification,
-           resolve_npc_to_monster
+           resolve_npc_to_monster,
           ]
 )
-
-player_interface_agent = LlmAgent(
-  name="player_interface_agent",
-  model=get_model_for_agent("player_interface_agent"),
-  description="You are the Player Interface Agent - the central hub for all player interactions in the Dungeons & Dragons game. You are the ONLY agent that directly communicates with the player. All other agents communicate through you. ",
-  instruction=load_instructions("player_interface_agent.txt"),
-    tools=[change_game_state, get_game_state, load_npc_from_campaign, load_campaign]
-)
-
 
 character_creation_agent = LlmAgent(
   name="character_creation_agent",
@@ -180,6 +174,7 @@ character_creation_agent = LlmAgent(
            finalize_character,
            create_character_data,
            save_character_to_campaign,
+           set_characters
           ]
 )
 
@@ -193,5 +188,5 @@ campaign_outline_generation_agent = LlmAgent(
            get_all_classes, get_class_details,
            get_all_spells, get_spell_details,
            get_all_magic_items, get_magic_item_details,
-           get_all_backgrounds, get_background_details]
+           get_all_backgrounds, get_background_details, set_state]
 )

@@ -9,33 +9,21 @@ agents:
       - rules_lawyer_agent
       - character_creation_agent
       - campaign_creation_agent
-      - player_interface_agent
     tools:
-      - route_to_narrative_agent
-      - route_to_rules_lawyer_agent
-      - route_to_npc_agent
-      - route_to_character_creation_agent
-      - route_to_campaign_creation_agent
-      - route_to_player_interface_agent
-      - send_response_to_root_agent
       - create_campaign
-      - save_character_to_campaign
-      - change_game_state
-      - get_game_state
       - save_campaign
       - load_campaign
-      - load_campaign_outline
+      - get_state
+      - set_state
+      - set_characters
 
   - name: narrative_agent
     description: "Provides environmental descriptions and story progression"
     model: gemini-2.0-flash
     instruction_file: agents/instructions/narrative_agent.txt
     tools:
-      - send_response_to_root_agent
-      - load_campaign
-      - save_campaign
-      - save_npc_to_campaign
-      - load_campaign_outline
+      - get_state
+      - set_state
       - get_all_monsters
       - get_monster_details
       - get_all_races
@@ -44,28 +32,22 @@ agents:
       - get_magic_item_details
       - get_all_spells
       - get_spell_details
-      - get_combat_result
-      - clear_combat_result
 
   - name: npc_agent
     description: "Roleplays NPCs during dialogue interactions"
     model: gemini-2.0-flash
     instruction_file: agents/instructions/npc_agent.txt
     tools:
-      - send_response_to_root_agent
-      - load_npc_from_campaign
-      - save_npc_to_campaign
-      - store_npc_in_memory
-      - get_npc_from_memory
-      - clear_npc_memory
-      - list_npcs_in_memory
+      - get_state
+      - set_state
 
   - name: rules_lawyer_agent
     description: "Handles combat, skill checks, and game mechanics"
     model: gemini-2.0-flash
     instruction_file: agents/instructions/rules_lawyer_agent.txt
     tools:
-      - send_response_to_root_agent
+      - get_state
+      - set_state
       - get_spell_details
       - get_all_spells
       - get_race_details
@@ -133,10 +115,11 @@ agents:
 
   - name: character_creation_agent
     description: "Assists with character creation process"
-    model: gemini-2.5-pro
+    model: gemini-2.5-flash
     instruction_file: agents/instructions/character_creation_agent.txt
     tools:
-      - send_response_to_root_agent
+      - get_state
+      - set_state
       - get_spell_details
       - get_all_spells
       - get_race_details
@@ -179,13 +162,13 @@ agents:
       - create_character_data
       - save_character_to_campaign
 
-  - name: campaign_creation_agent
+  - name: campaign_outline_generation_agent
     description: "Creates compelling campaign outlines for new adventures"
-    model: gemini-2.0-flash
-    instruction_file: agents/instructions/campaign_creation_agent.txt
+    model: gemini-2.5-pro
+    instruction_file: agents/instructions/campaign_outline_generation_agent.txt
     tools:
-      - send_response_to_root_agent
-      - generate_campaign_outline
+      - get_state
+      - set_state
       - get_all_monsters
       - get_monster_details
       - get_all_races
@@ -198,16 +181,5 @@ agents:
       - get_magic_item_details
       - get_all_backgrounds
       - get_background_details
-
-  - name: player_interface_agent
-    description: "Handles ALL direct player communication and routes to appropriate specialists"
-    model: gemini-2.0-flash
-    instruction_file: agents/instructions/player_interface_agent.txt
-    tools:
-      - route_action_to_root_agent
-      - change_game_state
-      - get_game_state
-      - load_npc_from_campaign
-      - load_campaign
 
 app_name: dungeon_master 

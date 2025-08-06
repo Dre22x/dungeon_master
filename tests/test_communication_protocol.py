@@ -12,6 +12,7 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types
 from root_agent.agent import root_agent
+from utils import run_agent_with_retry
 
 async def test_communication_protocol():
     """Test the communication protocol according to the outline."""
@@ -44,19 +45,14 @@ async def test_communication_protocol():
     print(f"Player input: '{test_message}'")
     print("Expected: Root agent should route this to Player Interface Agent")
     
-    try:
-        async for event in runner.run_async(
-            user_id="test_user", 
-            session_id="test_session", 
-            new_message=content
-        ):
-            if event.is_final_response():
-                if event.content and event.content.parts:
-                    response = event.content.parts[0].text
-                    print(f"✅ Response received: {response[:100]}...")
-                    break
-    except Exception as e:
-        print(f"❌ Error: {e}")
+    success, response, agent_name = await run_agent_with_retry(
+        runner, "test_user", "test_session", content
+    )
+    
+    if success and response:
+        print(f"✅ Response received: {response[:100]}...")
+    else:
+        print(f"❌ Error: Failed to get response")
     
     # Test 2: Character creation agent should run in same session
     print("\n📝 Test 2: Character creation agent session")
@@ -68,19 +64,14 @@ async def test_communication_protocol():
     print(f"Campaign start message: '{test_message}'")
     print("Expected: Character creation agent should run in same session as root agent")
     
-    try:
-        async for event in runner.run_async(
-            user_id="test_user", 
-            session_id="test_session", 
-            new_message=content
-        ):
-            if event.is_final_response():
-                if event.content and event.content.parts:
-                    response = event.content.parts[0].text
-                    print(f"✅ Response received: {response[:100]}...")
-                    break
-    except Exception as e:
-        print(f"❌ Error: {e}")
+    success, response, agent_name = await run_agent_with_retry(
+        runner, "test_user", "test_session", content
+    )
+    
+    if success and response:
+        print(f"✅ Response received: {response[:100]}...")
+    else:
+        print(f"❌ Error: Failed to get response")
     
     print("\n✅ Communication protocol test completed!")
 

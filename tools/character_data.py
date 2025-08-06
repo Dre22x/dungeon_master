@@ -1,6 +1,9 @@
+from typing import List
 from tools import _get_item_details, _fetch_index
 import textwrap
 from tools.game_mechanics import calculate_hp
+from google.adk.tools.tool_context import ToolContext
+
 
 # --- Character Data Tools ---
 
@@ -173,3 +176,23 @@ def create_character_data(
     }
     
     return character_data
+
+
+def set_characters(characters: List[str], tool_context: ToolContext) -> dict:
+    """
+    Set characters to given value.
+
+    Args:
+        characters: List[str] - The list of characters to set
+        tool_context: ToolContext - The tool context object
+
+    Returns:
+        dict - True if the characters were set successfully, False otherwise
+    """
+    try:
+      tool_context.state['characters'] = characters
+      print(f"Characters set to {characters}")
+      return {'action': 'set_characters', 'characters': characters, 'success': True}
+    except Exception as e:
+      print(f"Error setting characters: {e}")
+      return {'action': 'set_characters', 'characters': characters, 'success': False}

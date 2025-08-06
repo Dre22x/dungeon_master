@@ -46,7 +46,7 @@ def load_agent_config() -> Dict[str, str]:
         print("Using default model configuration.")
         return {}
 
-def get_model_for_agent(agent_name: str, default_model: str = "gemini-2.5-flash-lite-preview-06-17") -> str:
+def get_model_for_agent(agent_name: str, default_model: str = "gemini-2.5-flash") -> str:
     """
     Get the model name for a specific agent.
     

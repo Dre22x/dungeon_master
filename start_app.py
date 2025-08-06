@@ -32,11 +32,12 @@ def start_flask_app():
     global flask_process
     print("🚀 Starting Flask web server...")
     flask_dir = Path(__file__).parent / "UI"
+    venv_python = Path(__file__).parent / "venv" / "bin" / "python"
     
     try:
-        # Start Flask app
+        # Start Flask app using virtual environment Python
         flask_process = subprocess.Popen(
-            [sys.executable, "app.py"],
+            [str(venv_python), "app.py"],
             cwd=flask_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

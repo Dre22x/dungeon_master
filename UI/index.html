@@ -107,14 +107,11 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    campaign_id: campaignId
-                })
+                }
             })
             .then(response => response.json())
             .then(data => {
-                messageArea.textContent = `New campaign created! ID: ${campaignId}`;
+                messageArea.textContent = `New campaign started successfully!`;
                 // Redirect to the campaign interface
                 setTimeout(() => {
                     window.location.href = `/campaign?campaign_id=${campaignId}`;

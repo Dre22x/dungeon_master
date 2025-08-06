@@ -125,53 +125,7 @@
             </button>
         </div>
 
-        <!-- Session Switcher -->
-        <div id="sessionSwitcher" class="main-container rounded-lg p-4 mb-4 hidden">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="font-medieval text-lg text-amber-300">Active Session</h3>
-                    <p id="currentSessionInfo" class="text-sm text-gray-400">Root Agent Session</p>
-                </div>
-                <div class="flex gap-2">
-                    <button id="switchSessionBtn" class="btn-primary px-4 py-2 text-sm rounded-md">
-                        Switch Session
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Session Switch Modal -->
-            <div id="sessionSwitchModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-gray-800 border border-amber-600 rounded-lg max-w-md w-full">
-                        <div class="p-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h2 class="font-medieval text-xl text-amber-300">Switch Session</h2>
-                                <button id="closeSessionModalBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-                            </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Select Session</label>
-                                    <select id="sessionSelect" class="input-field w-full px-3 py-2 rounded-md">
-                                        <option value="">Loading sessions...</option>
-                                    </select>
-                                </div>
-                                <div id="sessionDescription" class="text-sm text-gray-400 hidden">
-                                    <!-- Session description will be shown here -->
-                                </div>
-                                <div class="flex gap-2">
-                                    <button id="confirmSwitchBtn" class="btn-primary flex-1 py-2 rounded-md" disabled>
-                                        Switch
-                                    </button>
-                                    <button id="cancelSwitchBtn" class="btn-primary flex-1 py-2 rounded-md">
-                                        Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Chat Tab Content -->
         <div id="chatTabContent" class="main-container rounded-lg p-6">
@@ -249,175 +203,7 @@
         let currentCampaignId = null;
         let isInitialized = false;
         
-        // Session management variables
-        let currentSessionId = null;
-        let currentAgentName = 'Root Agent';
-        let sessionSwitchNotifications = [];
 
-
-        // Session management functions
-        function updateSessionInfo(sessionId, agentName) {
-            currentSessionId = sessionId;
-            currentAgentName = agentName;
-            
-            const sessionSwitcher = document.getElementById('sessionSwitcher');
-            const currentSessionInfo = document.getElementById('currentSessionInfo');
-            
-            if (sessionId) {
-                sessionSwitcher.classList.remove('hidden');
-                currentSessionInfo.textContent = `${agentName} (${sessionId})`;
-            } else {
-                sessionSwitcher.classList.add('hidden');
-            }
-        }
-
-        function handleSessionSwitch(data) {
-            const { new_session_id, to_agent, adk_url, switch_immediate } = data;
-            
-            // Update session info
-            updateSessionInfo(new_session_id, to_agent);
-            
-            // Store notification for user reference
-            sessionSwitchNotifications.push({
-                sessionId: new_session_id,
-                agentName: to_agent,
-                adkUrl: adk_url,
-                timestamp: new Date().toISOString()
-            });
-            
-            // Show user-friendly notification
-            if (switch_immediate) {
-                showMessage(`🔄 Console immediately switched to ${to_agent}. You can now communicate directly with this agent in the ADK web interface.`, 'system');
-            } else {
-                showMessage(`Session switched to ${to_agent}. You can now communicate with this agent in the ADK web interface.`, 'system');
-            }
-        }
-
-        function openAdkWeb() {
-            if (currentSessionId) {
-                // No longer opening ADK web - all interactions happen in the UI
-                showMessage(`Session ${currentSessionId} is active. All interactions happen in this interface.`, 'system');
-            } else {
-                showMessage('No active session to open.', 'system');
-            }
-        }
-
-        function showSessionSwitchModal() {
-            const modal = document.getElementById('sessionSwitchModal');
-            modal.classList.remove('hidden');
-            
-            // Load available sessions
-            loadAvailableSessions();
-        }
-
-        async function loadAvailableSessions() {
-            try {
-                const response = await fetch(`/get-available-sessions/${currentCampaignId}`);
-                const data = await response.json();
-                
-                const sessionSelect = document.getElementById('sessionSelect');
-                const confirmSwitchBtn = document.getElementById('confirmSwitchBtn');
-                
-                if (data.status === 'success') {
-                    // Clear existing options
-                    sessionSelect.innerHTML = '<option value="">Select a session...</option>';
-                    
-                    // Add sessions to dropdown
-                    data.sessions.forEach(session => {
-                        const option = document.createElement('option');
-                        option.value = session.session_id;
-                        option.textContent = `${session.agent_name} (${session.session_id})`;
-                        option.setAttribute('data-description', session.description);
-                        option.setAttribute('data-agent-name', session.agent_name);
-                        sessionSelect.appendChild(option);
-                    });
-                    
-                    // Enable the switch button if sessions are available
-                    confirmSwitchBtn.disabled = data.sessions.length === 0;
-                    
-                    if (data.sessions.length === 0) {
-                        sessionSelect.innerHTML = '<option value="">No sessions available</option>';
-                    }
-                } else {
-                    sessionSelect.innerHTML = '<option value="">Error loading sessions</option>';
-                    confirmSwitchBtn.disabled = true;
-                }
-            } catch (error) {
-                console.error('Error loading sessions:', error);
-                const sessionSelect = document.getElementById('sessionSelect');
-                sessionSelect.innerHTML = '<option value="">Error loading sessions</option>';
-                document.getElementById('confirmSwitchBtn').disabled = true;
-            }
-        }
-
-        function handleSessionSelection() {
-            const sessionSelect = document.getElementById('sessionSelect');
-            const sessionDescription = document.getElementById('sessionDescription');
-            const confirmSwitchBtn = document.getElementById('confirmSwitchBtn');
-            
-            const selectedOption = sessionSelect.options[sessionSelect.selectedIndex];
-            
-            if (selectedOption && selectedOption.value) {
-                const description = selectedOption.getAttribute('data-description');
-                const agentName = selectedOption.getAttribute('data-agent-name');
-                
-                sessionDescription.textContent = description;
-                sessionDescription.classList.remove('hidden');
-                confirmSwitchBtn.disabled = false;
-                
-                // Store the agent name for the switch operation
-                confirmSwitchBtn.setAttribute('data-agent-name', agentName);
-            } else {
-                sessionDescription.textContent = '';
-                sessionDescription.classList.add('hidden');
-                confirmSwitchBtn.disabled = true;
-            }
-        }
-
-        function hideSessionSwitchModal() {
-            const modal = document.getElementById('sessionSwitchModal');
-            modal.classList.add('hidden');
-            
-            // Clear dropdown and reset form
-            const sessionSelect = document.getElementById('sessionSelect');
-            const sessionDescription = document.getElementById('sessionDescription');
-            const confirmSwitchBtn = document.getElementById('confirmSwitchBtn');
-            
-            sessionSelect.innerHTML = '<option value="">Loading sessions...</option>';
-            sessionDescription.textContent = '';
-            sessionDescription.classList.add('hidden');
-            confirmSwitchBtn.disabled = true;
-            confirmSwitchBtn.removeAttribute('data-agent-name');
-        }
-
-        async function performSessionSwitch(sessionId, agentName) {
-            try {
-                const response = await fetch(`/switch-session/${currentCampaignId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        session_id: sessionId,
-                        agent_name: agentName
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    updateSessionInfo(sessionId, agentName);
-                    addDebugMessage(`✅ Session switched to ${agentName} (${sessionId})`, 'session_switch', data);
-                    showMessage(`Session switched to ${agentName}. You can now communicate with this agent.`, 'system');
-                    hideSessionSwitchModal();
-                } else {
-                    showMessage(`Error switching session: ${data.message}`, 'system');
-                }
-            } catch (error) {
-                console.error('Error switching session:', error);
-                showMessage('Error switching session', 'system');
-            }
-        }
 
 
 
@@ -439,34 +225,12 @@
             document.getElementById('campaignId').textContent = campaignId;
             document.getElementById('campaignStatus').textContent = 'Initializing...';
 
-            // Initialize session state
-            currentSessionId = `session_${campaignId}`;
-            currentAgentName = 'Root Agent';
-            updateSessionInfo(currentSessionId, currentAgentName);
-
             try {
-                // Initialize the agent for this campaign
-                const response = await fetch('/initialize-campaign', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ campaign_id: campaignId })
-                });
-
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    document.getElementById('campaignStatus').textContent = 'Ready';
-                    isInitialized = true;
-                    enableInput();
-                    
-                    if (data.agent_response) {
-                        showMessage(data.agent_response, 'agent');
-                    }
-                } else {
-                    showMessage('Error initializing campaign: ' + data.message, 'system');
-                }
+                // For now, just enable the interface since we don't have the initialize-campaign endpoint
+                document.getElementById('campaignStatus').textContent = 'Ready';
+                isInitialized = true;
+                enableInput();
+                showMessage('Campaign ready! You can now start chatting with the Dungeon Master.', 'system');
             } catch (error) {
                 console.error('Error:', error);
                 showMessage('Error initializing campaign', 'system');
@@ -519,9 +283,6 @@
             showMessage(message, 'user');
             input.value = '';
 
-            // Add debug logging
-            addDebugMessage(`Sending message: "${message}"`, 'api');
-
             // Show typing indicator
             const typingIndicator = document.getElementById('typingIndicator');
             typingIndicator.style.display = 'block';
@@ -540,9 +301,6 @@
 
                 const data = await response.json();
                 
-                // Add debug logging for response
-                addDebugMessage(`Received response: ${data.status}`, 'api');
-                
                 // Hide typing indicator
                 typingIndicator.style.display = 'none';
 
@@ -550,13 +308,11 @@
                     showMessage(data.agent_response, 'agent');
                 } else {
                     showMessage('Error: ' + data.message, 'system');
-                    addDebugMessage(`Error: ${data.message}`, 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
                 typingIndicator.style.display = 'none';
                 showMessage('Error sending message', 'system');
-                addDebugMessage(`Network error: ${error.message}`, 'error');
             }
         }
 
@@ -577,15 +333,12 @@
             // Hide all tab contents
             document.getElementById('chatTabContent').classList.add('hidden');
             document.getElementById('charactersTabContent').classList.add('hidden');
-            document.getElementById('debugTabContent').classList.add('hidden'); // Hide debug tab content
             
             // Remove active state from all tabs
             document.getElementById('chatTab').classList.remove('opacity-100');
             document.getElementById('chatTab').classList.add('opacity-75');
             document.getElementById('charactersTab').classList.remove('opacity-100');
             document.getElementById('charactersTab').classList.add('opacity-75');
-            document.getElementById('debugTab').classList.remove('opacity-100');
-            document.getElementById('debugTab').classList.add('opacity-75');
             
             // Show selected tab content
             document.getElementById(tabName + 'TabContent').classList.remove('hidden');
@@ -597,11 +350,6 @@
             // Load characters if switching to characters tab
             if (tabName === 'characters') {
                 loadCharacters();
-            }
-            
-            // Set up debug WebSocket if switching to debug tab
-            if (tabName === 'debug' && currentCampaignId) {
-                setupDebugWebSocket();
             }
         }
 
@@ -680,11 +428,6 @@
             const equipment = character.equipment || [];
             const inventory = character.inventory || [];
             const spells = character.spells || [];
-            
-            // Debug logging
-            console.log('Character data:', character);
-            console.log('Skills:', skills);
-            console.log('Proficiencies:', proficiencies);
             
             characterDetails.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -860,43 +603,11 @@
         // Event listeners for tabs
         document.getElementById('chatTab').addEventListener('click', () => switchTab('chat'));
         document.getElementById('charactersTab').addEventListener('click', () => switchTab('characters'));
-        document.getElementById('debugTab').addEventListener('click', () => switchTab('debug')); // Add event listener for debug tab
         document.getElementById('closeModalBtn').addEventListener('click', closeModal);
         
-        // Session switcher event listeners
-        document.getElementById('switchSessionBtn').addEventListener('click', showSessionSwitchModal);
-        document.getElementById('closeSessionModalBtn').addEventListener('click', hideSessionSwitchModal);
-        document.getElementById('cancelSwitchBtn').addEventListener('click', hideSessionSwitchModal);
-        document.getElementById('confirmSwitchBtn').addEventListener('click', function() {
-            const sessionId = document.getElementById('sessionSelect').value.trim();
-            const agentName = this.getAttribute('data-agent-name'); // Use the agent name from the button
-            
-            if (!sessionId) {
-                showMessage('Please select a session to switch to', 'system');
-                return;
-            }
-            
-            performSessionSwitch(sessionId, agentName);
-        });
-        document.getElementById('sessionSelect').addEventListener('change', handleSessionSelection); // Add change listener for session select
+
         
-        // Debug console event listeners
-        document.getElementById('clearDebugBtn').addEventListener('click', clearDebugConsole);
-        document.getElementById('toggleAutoScrollBtn').addEventListener('click', toggleAutoScroll);
-        document.getElementById('showSummaryBtn').addEventListener('click', showSummary);
-        
-        // Filter event listeners
-        document.querySelectorAll('.debug-filter').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const type = this.getAttribute('data-type');
-                if (this.checked) {
-                    activeFilters.add(type);
-                } else {
-                    activeFilters.delete(type);
-                }
-                applyFilters();
-            });
-        });
+
         
         // Add event listeners for expandable items
         function addExpandableItemListeners() {
@@ -989,21 +700,16 @@
                         detailsDiv.classList.remove('hidden');
                         
                         try {
-                            // Debug logging
-                            console.log(`Fetching ${type} details for: ${name} (normalized: ${apiName})`);
                             const url = `/api/${apiType}/${encodeURIComponent(apiName)}`;
-                            console.log(`API URL: ${url}`);
                             
                             // Fetch details from API
                             const response = await fetch(url);
-                            console.log(`Response status: ${response.status}`);
                             
                             if (!response.ok) {
                                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                             }
                             
                             const data = await response.json();
-                            console.log(`Response data:`, data);
                             
                             if (data.status === 'success') {
                                 detailsDiv.innerHTML = formatItemDetails(data.details, type);
