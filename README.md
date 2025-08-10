@@ -229,31 +229,58 @@ This will provide detailed logging of agent interactions, tool calls, and sessio
 
 ```
 dungeon_master/
-├── root_agent/                 # Agent definitions and instructions
-│   ├── agent.py               # Root agent configuration
-│   ├── sub_agents.py          # Specialist agent definitions
-│   ├── config_loader.py       # Model configuration loading
-│   └── instructions/          # Agent instruction files
-├── tools/                     # Tool implementations
-│   ├── character_data.py      # Character creation tools
-│   ├── campaign_outline.py    # Campaign management tools
-│   ├── game_mechanics.py      # Combat and rules tools
-│   ├── misc_tools.py          # Routing and utility tools
-│   └── ...                    # Other specialized tools
-├── firestore/                 # Database utilities
-│   └── db_utils.py           # Database utility functions
-├── UI/                        # Web interface
-│   ├── app.py                # Flask application
-│   ├── index.html            # Main page
-│   └── campaign.html         # Campaign interface
-├── config/                    # Configuration files
-│   └── service-account-key.json
-├── tests/                     # Test files
-├── adk.yaml                  # ADK configuration with agent models
-├── start_app.py              # Application startup script
-└── README.md                 # This file
-
+├── src/                        # Main source code
+│   ├── agents/                 # AI agent system
+│   │   ├── agent.py           # Root agent implementation
+│   │   ├── sub_agents.py      # Specialized agent definitions
+│   │   ├── config_loader.py   # Agent configuration management
+│   │   └── instructions/      # Agent instruction files
+│   ├── core/                   # Core game logic
+│   │   ├── session_manager.py # Session state management
+│   │   └── utils.py           # Utility functions
+│   ├── data/                   # Game data and rules engine
+│   │   └── tools/             # Game mechanics and data
+│   │       ├── character_data.py # Character management
+│   │       ├── game_mechanics.py # Combat and game rules
+│   │       ├── campaign_outline.py # Story generation
+│   │       ├── races.py       # Race definitions
+│   │       ├── classes.py     # Class definitions
+│   │       ├── spells.py      # Spell system
+│   │       ├── equipment.py   # Equipment and items
+│   │       ├── monsters.py    # Monster data
+│   │       ├── magic_items.py # Magical items
+│   │       ├── weapons.py     # Weapon definitions
+│   │       ├── traits.py      # Character traits
+│   │       ├── subraces.py    # Subrace options
+│   │       ├── subclasses.py  # Subclass options
+│   │       └── rules.py       # Game rules engine
+│   ├── database/               # Database layer
+│   │   └── firestore/         # Firebase integration
+│   │       ├── database_manager.py # Database operations
+│   │       └── db_utils.py    # Database utility functions
+│   ├── web/                    # Web interface
+│   │   ├── app.py             # Flask application
+│   │   ├── index.html         # Main page template
+│   │   └── campaign.html      # Campaign interface template
+│   ├── main.py                 # Console application entry point
+│   └── start_app.py           # Web application startup
+├── config/                      # Configuration files
+│   ├── adk.yaml               # Agent configuration
+│   └── .env.template          # Environment variables template
+├── scripts/                     # Utility scripts
+│   └── quick_start.py         # Automated setup script
+├── tests/                       # Test suite
+├── docs/                        # Documentation
+├── examples/                    # Usage examples
+├── requirements.txt             # Python dependencies
+├── setup.py                     # Package configuration
+├── .gitignore                   # Git ignore rules
+├── .gitattributes              # Git attributes
+├── LICENSE                      # Project license
+└── README.md                    # This file
 ```
+
+**🏗️ Professional Architecture**: This clean structure demonstrates industry-standard Python packaging, clear separation of concerns, and maintainable code organization that recruiters will appreciate.
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

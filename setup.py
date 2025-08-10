@@ -15,7 +15,8 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/dungeon_master",
-    packages=find_packages(),
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -42,7 +43,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "dungeon-master=start_app:main",
+            "dungeon-master=src.start_app:main",
         ],
     },
     include_package_data=True,

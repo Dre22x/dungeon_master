@@ -8,7 +8,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from root_agent.config_loader import load_agent_config, get_model_for_agent, get_all_agent_models
+from src.agents.config_loader import load_agent_config, get_model_for_agent, get_all_agent_models
 
 def test_config_loading():
     """Test the configuration loading functionality."""
@@ -74,8 +74,8 @@ def test_agent_creation():
     
     try:
         # Import agents to test creation
-        from root_agent.sub_agents import narrative_agent, npc_agent, rules_lawyer_agent, character_creation_agent
-        from root_agent.agent import root_agent
+        from src.agents.sub_agents import narrative_agent, npc_agent, rules_lawyer_agent, character_creation_agent
+        from src.agents.agent import root_agent
         
         print("✅ All agents imported successfully")
         

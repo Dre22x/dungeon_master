@@ -1,6 +1,6 @@
 import uuid
 from google.adk.sessions import InMemorySessionService
-from root_agent.agent import root_agent
+from src.agents.agent import root_agent
 from google.adk.runners import Runner
 import asyncio
 from utils import call_agent_async

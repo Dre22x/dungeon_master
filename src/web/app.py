@@ -2,8 +2,8 @@ from flask import Flask, render_template, jsonify
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from firestore import db_utils
-from root_agent.agent import root_agent
+from src.database.firestore import db_utils
+from src.agents.agent import root_agent
 import datetime
 import json
 from main import main_async

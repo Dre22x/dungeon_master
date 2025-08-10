@@ -8,7 +8,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from root_agent.agent import root_agent
+from src.agents.agent import root_agent
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types
@@ -45,7 +45,7 @@ async def test_session_management():
     }
     
     # Import character creation agent
-    from root_agent.sub_agents import character_creation_agent
+    from src.agents.sub_agents import character_creation_agent
     
     # Run sub-agent (this should create and terminate a session)
     print("   Running character creation agent...")
