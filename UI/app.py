@@ -200,7 +200,7 @@ def load_campaign(campaign_id):
 def chat():
     """
     API endpoint to handle chat messages with the agent.
-    Player input is automatically routed to the Player Interface Agent.
+    Player input is automatically routed to the Root Agent for processing.
     """
     from flask import request
     

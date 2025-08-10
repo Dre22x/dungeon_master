@@ -49,6 +49,10 @@ This project demonstrates advanced AI agent orchestration, multi-agent systems, 
    - Generate a service account key in Project Settings > Service Accounts
    - Replace the template in `config/service-account-key.json` with your actual credentials
    - **⚠️ Never commit real credentials to version control**
+4. **Configure environment variables**:
+   - Copy `.env.template` to `.env`
+   - Fill in your actual API keys and configuration values
+   - **⚠️ Never commit the .env file to version control**
 
 4. **Initialize the database**:
    ```bash
@@ -94,26 +98,25 @@ The system uses a hierarchical agent architecture:
 ```
 Root Agent (Orchestrator)
 ├── Character Creation Agent
-├── Campaign Creation Agent
+├── Campaing Outline Generation Agent
 ├── Narrative Agent
 ├── Rules Lawyer Agent
-├── NPC Agent
-└── Player Interface Agent
+└── NPC Agent
 ```
 
 ### Key Components
 
 - **Root Agent**: Master coordinator that routes actions to specialist agents
 - **Character Creation Agent**: Guides players through character creation
-- **Campaign Creation Agent**: Generates campaign outlines and story structure
+- **Campaing Outline Generation Agent**: Generates campaign outlines and story structure
 - **Narrative Agent**: Handles story elements and environmental descriptions
 - **Rules Lawyer Agent**: Manages combat mechanics and rules questions
 - **NPC Agent**: Handles NPC dialogue and roleplay
-- **Player Interface Agent**: Manages direct player communication
+
 
 ### Data Flow
 
-1. **Player Input** → Player Interface Agent
+1. **Player Input** → Root Agent receives and processes input
 2. **Action Routing** → Root Agent determines appropriate specialist
 3. **Specialist Processing** → Specialist agent handles the specific task
 4. **Response Coordination** → Root Agent coordinates multiple responses if needed
@@ -138,12 +141,7 @@ agents:
 
 The application uses Firebase Firestore for persistent storage:
 
-- **Campaigns**: Campaign data, context, and state
-- **Characters**: Player character sheets and data
-- **NPCs**: Non-player character information
-- **Monsters**: Monster statistics and data
-- **Locations**: World locations and descriptions
-- **Quests**: Active quests and objectives
+- **State**: All global state variables are stored to maintain campign continuity
 
 ## 🧪 Development
 
@@ -186,16 +184,7 @@ pytest --cov=.
        instruction=load_instructions("new_agent.txt"),
        tools=[tool1, tool2, tool3]
    )
-   ```
-
-3. **Add routing tool** in `tools/misc_tools.py`:
-   ```python
-   def route_to_new_agent(action_data: Dict[str, Any]) -> str:
-       return run_sub_agent_sync(new_agent, action_data)
-   ```
-
-4. **Update root agent** to include the new agent and routing tool
-
+   
 ## 🔧 Troubleshooting
 
 ### Common Issues
@@ -252,7 +241,6 @@ dungeon_master/
 │   ├── misc_tools.py          # Routing and utility tools
 │   └── ...                    # Other specialized tools
 ├── firestore/                 # Database utilities
-│   ├── database_manager.py    # Database operations
 │   └── db_utils.py           # Database utility functions
 ├── UI/                        # Web interface
 │   ├── app.py                # Flask application
@@ -264,16 +252,8 @@ dungeon_master/
 ├── adk.yaml                  # ADK configuration with agent models
 ├── start_app.py              # Application startup script
 └── README.md                 # This file
+
 ```
-
-## 🤝 Contributing
-
-1. **Fork the repository**
-2. **Create a feature branch**
-3. **Make your changes**
-4. **Add tests** for new functionality
-5. **Submit a pull request**
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -282,5 +262,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - **Never commit real Firebase credentials** to version control
 - The `config/service-account-key.json` file contains a template - replace with your actual credentials
+- **Never commit the .env file** to version control
+- Use `.env.template` as a starting point for your configuration
 - Ensure your `.gitignore` properly excludes sensitive files
 - Use environment variables for production deployments

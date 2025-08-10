@@ -89,17 +89,17 @@ def setup_environment():
     """Set up environment variables"""
     print("\n🔧 Setting up environment...")
     
-    # Create .env file if it doesn't exist
+    # Check for .env file
     env_file = Path(".env")
+    env_template = Path(".env.template")
+    
     if not env_file.exists():
-        with open(env_file, 'w') as f:
-            f.write("# Environment variables for AI Dungeon Master\n")
-            f.write("# Add your configuration here\n\n")
-            f.write("# Debug mode (optional)\n")
-            f.write("# DEBUG=1\n\n")
-            f.write("# Custom port (optional)\n")
-            f.write("# FLASK_PORT=5001\n")
-        print("✅ Created .env file")
+        if env_template.exists():
+            print("⚠️  .env file not found")
+            print("   Please copy .env.template to .env and configure your credentials")
+            print("   Example: cp .env.template .env")
+        else:
+            print("⚠️  .env file not found and no template available")
     else:
         print("✅ .env file exists")
 
@@ -166,7 +166,7 @@ def main():
     
     # Check configuration
     if not check_config_files():
-        print("\n❌ Please configure your Firebase credentials and try again.")
+        print("\n❌ Please configure your Firebase credentials and environment variables.")
         print("See README.md for setup instructions.")
         sys.exit(1)
     

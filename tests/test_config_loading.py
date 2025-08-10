@@ -30,7 +30,7 @@ def test_config_loading():
     
     # Test 2: Get model for specific agents
     print("\n2. Testing individual agent model retrieval...")
-    test_agents = ["root_agent", "narrative_agent", "npc_agent", "rules_lawyer_agent", "character_creation_agent", "player_interface_agent"]
+    test_agents = ["root_agent", "narrative_agent", "npc_agent", "rules_lawyer_agent", "character_creation_agent"]
     
     for agent_name in test_agents:
         model_name = get_model_for_agent(agent_name)
@@ -74,7 +74,7 @@ def test_agent_creation():
     
     try:
         # Import agents to test creation
-        from root_agent.sub_agents import narrative_agent, npc_agent, rules_lawyer_agent, character_creation_agent, player_interface_agent
+        from root_agent.sub_agents import narrative_agent, npc_agent, rules_lawyer_agent, character_creation_agent
         from root_agent.agent import root_agent
         
         print("✅ All agents imported successfully")
@@ -86,7 +86,7 @@ def test_agent_creation():
             ("npc_agent", npc_agent),
             ("rules_lawyer_agent", rules_lawyer_agent),
             ("character_creation_agent", character_creation_agent),
-            ("player_interface_agent", player_interface_agent)
+    
         ]
         
         print("\n📋 Agent model verification:")
