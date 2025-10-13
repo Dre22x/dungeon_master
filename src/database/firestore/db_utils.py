@@ -3,7 +3,7 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 
 # Set up Google Cloud credentials using service account key
-SERVICE_ACCOUNT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "service-account-key.json")
+SERVICE_ACCOUNT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "config", "service-account-key.json")
 
 # Set the environment variable for Google Cloud credentials
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = SERVICE_ACCOUNT_PATH

@@ -1,7 +1,7 @@
 from typing import List
-from tools import _get_item_details, _fetch_index
+from .tools import _get_item_details, _fetch_index
 import textwrap
-from tools.game_mechanics import calculate_hp
+from .game_mechanics import calculate_hp
 from google.adk.tools.tool_context import ToolContext
 
 

@@ -31,8 +31,8 @@ def start_flask_app():
     """Start the Flask web application."""
     global flask_process
     print("🚀 Starting Flask web server...")
-    flask_dir = Path(__file__).parent / "UI"
-    venv_python = Path(__file__).parent / "venv" / "bin" / "python"
+    flask_dir = Path(__file__).parent / "web"
+    venv_python = Path(__file__).parent.parent / "venv" / "bin" / "python"
     
     try:
         # Start Flask app using virtual environment Python
@@ -76,7 +76,8 @@ def main():
     print("=" * 50)
     
     # Check if we're in the right directory
-    if not Path("adk.yaml").exists():
+    project_root = Path(__file__).parent.parent
+    if not (project_root / "adk.yaml").exists():
         print("❌ Error: adk.yaml not found. Please run this script from the project root directory.")
         sys.exit(1)
     

@@ -1,12 +1,11 @@
 from flask import Flask, render_template, jsonify
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from src.database.firestore import db_utils
-from src.agents.agent import root_agent
+from ..database.firestore.db_utils import *
+from ..agents.agent import root_agent
 import datetime
 import json
-from main import main_async
+from ..main import main_async
 
 def make_json_serializable(obj):
     if isinstance(obj, dict):
@@ -72,7 +71,7 @@ def get_campaign_characters(campaign_id):
     API endpoint to get all characters for a specific campaign.
     """
     try:
-        characters = db_utils.list_characters_in_campaign(campaign_id)
+        characters = list_characters_in_campaign(campaign_id)
         if 'error' in characters:
             return jsonify({"status": "error", "message": characters['error']}), 404
         
@@ -90,7 +89,7 @@ def get_equipment_details(equipment_name):
     API endpoint to get detailed information about a piece of equipment.
     """
     try:
-        from tools.equipment import get_equipment_details
+        from ..data.tools.equipment import get_equipment_details
         details = get_equipment_details(equipment_name)
         return jsonify({
             "status": "success",
@@ -106,7 +105,7 @@ def get_spell_details(spell_name):
     API endpoint to get detailed information about a spell.
     """
     try:
-        from tools.spells import get_spell_details
+        from ..data.tools.spells import get_spell_details
         details = get_spell_details(spell_name)
         return jsonify({
             "status": "success",
@@ -122,7 +121,7 @@ def get_skill_details(skill_name):
     API endpoint to get detailed information about a skill.
     """
     try:
-        from tools.character_data import get_skill_details
+        from ..data.tools.character_data import get_skill_details
         details = get_skill_details(skill_name)
         return jsonify({
             "status": "success",
@@ -138,7 +137,7 @@ def get_proficiency_details(proficiency_name):
     API endpoint to get detailed information about a proficiency.
     """
     try:
-        from tools.character_data import get_proficiency_details
+        from ..data.tools.character_data import get_proficiency_details
         details = get_proficiency_details(proficiency_name)
         return jsonify({
             "status": "success",
@@ -154,7 +153,7 @@ def get_skills_index():
     Returns a mapping of skill display names to their API indexes.
     """
     try:
-        from tools.character_data import get_all_skills
+        from ..data.tools.character_data import get_all_skills
         skills_data = get_all_skills()
         # skills_data is a dict with 'results' key containing the list
         skills = skills_data.get('results', [])
@@ -169,7 +168,7 @@ def get_proficiencies_index():
     Returns a mapping of proficiency display names to their API indexes.
     """
     try:
-        from tools.character_data import get_all_proficiencies
+        from ..data.tools.character_data import get_all_proficiencies
         profs_data = get_all_proficiencies()
         # profs_data is a dict with 'results' key containing the list
         profs = profs_data.get('results', [])

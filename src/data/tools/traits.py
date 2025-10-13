@@ -1,4 +1,4 @@
-from tools import _get_item_details, _fetch_index
+from .tools import _get_item_details, _fetch_index
 
 # --- Trait Tools ---
 def get_trait_details(trait_name: str) -> dict:

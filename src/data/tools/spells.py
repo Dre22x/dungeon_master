@@ -1,5 +1,5 @@
 import textwrap
-from tools import _get_item_details, _fetch_index
+from .tools import _get_item_details, _fetch_index
 
 # --- Spell Tools ---
 def get_spell_details(spell_name: str) -> dict:

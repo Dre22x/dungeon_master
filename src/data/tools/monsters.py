@@ -1,5 +1,5 @@
 import textwrap
-from tools import _get_item_details, _fetch_index
+from .tools import _get_item_details, _fetch_index
 
 # --- Monster Tools ---
 def get_monster_details(monster_name: str) -> dict:

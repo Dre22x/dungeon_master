@@ -6,11 +6,7 @@ to the Firestore database. The outline includes the main quest, plot acts,
 key NPCs, and monsters for a cohesive campaign narrative.
 """
 
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from firestore import db_utils
+from database.firestore.db_utils import *
 from google.cloud import firestore
 import random
 

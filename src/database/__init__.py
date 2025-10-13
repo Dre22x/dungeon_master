@@ -10,8 +10,7 @@ This package handles all data storage and retrieval:
 from . import firestore
 from .firestore import (
     db_utils,
-    database_manager,
     init_database
 )
 
-__all__ = ["firestore", "db_utils", "database_manager", "init_database"]
+__all__ = ["firestore", "db_utils", "init_database"]

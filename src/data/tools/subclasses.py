@@ -1,5 +1,5 @@
 import textwrap
-from tools import _get_item_details, _fetch_index
+from .tools import _get_item_details, _fetch_index
 
 # --- Subclass Tools ---
 def get_subclass_details(subclass_name: str) -> dict:

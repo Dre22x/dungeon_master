@@ -256,7 +256,6 @@ dungeon_master/
 │   │       └── rules.py       # Game rules engine
 │   ├── database/               # Database layer
 │   │   └── firestore/         # Firebase integration
-│   │       ├── database_manager.py # Database operations
 │   │       └── db_utils.py    # Database utility functions
 │   ├── web/                    # Web interface
 │   │   ├── app.py             # Flask application

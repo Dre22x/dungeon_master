@@ -1,5 +1,5 @@
 import textwrap
-from tools import _get_item_details, _fetch_index
+from .tools import _get_item_details, _fetch_index
 
 # --- Race Tools ---
 def get_race_details(race_name: str) -> dict:

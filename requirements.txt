@@ -7,8 +7,7 @@ python-dotenv>=1.0.0
 google-cloud-firestore>=2.11.0
 google-auth>=2.17.0
 
-# Async support
-asyncio-compat>=0.1.0
+# Async support (built into Python 3.7+)
 
 # Testing
 pytest>=7.4.0

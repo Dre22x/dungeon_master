@@ -10,7 +10,7 @@ import os
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from db_utils import get_db_client, save_character, load_character
+from db_utils import get_db_client, save_character_to_campaign, load_character_from_campaign
 
 def initialize_database():
     """Initialize the Firestore database with basic setup."""
@@ -59,12 +59,12 @@ def initialize_database():
     
     # Save test character
     print("   Saving test character...")
-    save_result = save_character(test_character)
+    save_result = save_character_to_campaign("test_campaign", test_character)
     print(f"   {save_result}")
     
     # Load test character
     print("   Loading test character...")
-    loaded_character = load_character("TestCharacter")
+    loaded_character = load_character_from_campaign("test_campaign", "TestCharacter")
     
     if "error" not in loaded_character:
         print("   ✅ Character loaded successfully!")

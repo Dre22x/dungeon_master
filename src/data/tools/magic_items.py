@@ -1,4 +1,4 @@
-from tools import _get_item_details, _fetch_index
+from .tools import _get_item_details, _fetch_index
 
 # --- Magic Item Tools ---
 def get_magic_item_details(magic_item_name: str) -> dict:
