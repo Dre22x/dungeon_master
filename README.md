@@ -31,64 +31,6 @@ This project demonstrates advanced AI agent orchestration, multi-agent systems, 
 3. **Firebase/Firestore** project set up
 4. **Google Cloud** credentials configured
 
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd dungeon_master
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up Firebase credentials**:
-   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
-   - Generate a service account key in Project Settings > Service Accounts
-   - Replace the template in `config/service-account-key.json` with your actual credentials
-   - **⚠️ Never commit real credentials to version control**
-4. **Configure environment variables**:
-   - Copy `.env.template` to `.env`
-   - Fill in your actual API keys and configuration values
-   - **⚠️ Never commit the .env file to version control**
-
-4. **Initialize the database**:
-   ```bash
-   python init_database.py
-   ```
-
-### Running the Application
-
-**Option 1: Start both services with one command**
-```bash
-python start_app.py
-```
-
-**Option 2: Start services separately**
-
-**Terminal 1 - Flask Web Server:**
-```bash
-python UI/app.py
-```
-- Web interface available at `http://localhost:5001`
-- Check for port conflicts and ADK installation
-
-**Terminal 2 - Development:**
-```bash
-# Optional: For development and debugging
-adk web .
-```
-
-### Usage
-
-1. **Start both services** (Flask + ADK dev UI)
-2. **Open your browser** to `http://localhost:5001`
-3. **Click "New Campaign"** to start a new adventure
-4. **Interact with your AI Dungeon Master** through the web interface
-5. **Create characters, explore, and battle** in your custom D&D world
-
 ## 🏗️ Architecture
 
 ### Agent Hierarchy
@@ -136,94 +78,6 @@ agents:
     model: gemini-1.5-flash
   # ... other agents
 ```
-
-### Database Configuration
-
-The application uses Firebase Firestore for persistent storage:
-
-- **State**: All global state variables are stored to maintain campign continuity
-
-## 🧪 Development
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_character_creation.py
-
-# Run with coverage
-pytest --cov=.
-```
-
-### Adding New Tools
-
-1. **Create the tool function** in the appropriate module under `tools/`
-2. **Add the tool to the agent** in `agents/agent.py` or `agents/sub_agents.py`
-3. **Update agent instructions** to include the new tool
-4. **Test the integration** with the agent system
-
-### Adding New Agents
-
-1. **Create agent configuration** in `adk.yaml`:
-   ```yaml
-   agents:
-     new_agent:
-       model: gemini-1.5-flash
-       description: "Description of the new agent"
-   ```
-
-2. **Create agent instance** in `agents/sub_agents.py`:
-   ```python
-   new_agent = LlmAgent(
-       name="new_agent",
-       model=get_model_for_agent("new_agent"),
-       description="Description of the new agent",
-       instruction=load_instructions("new_agent.txt"),
-       tools=[tool1, tool2, tool3]
-   )
-   
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **"No agents found" in ADK dev UI**
-   - Ensure `adk.yaml` exists in the project root
-   - Check that the agent configurations are correct
-   - Verify that `adk web .` is running from the project root
-
-2. **Database connection errors**
-   - Verify `config/service-account-key.json` exists and is valid
-   - Check Firebase project configuration
-   - Ensure Firestore is enabled in your Firebase project
-
-3. **Model not found errors**
-   - Ensure `adk.yaml` file exists and is properly formatted
-   - Check that the model names are correct
-   - Verify Google Cloud credentials are set up
-
-4. **Tool not found errors**
-   - Check that the tool is properly imported
-   - Verify the tool is added to the agent's tools list
-   - Update `adk.yaml` configuration with model name
-
-5. **Session management issues**
-   - Check that the session service is properly initialized
-   - Verify session IDs are being generated correctly
-   - Ensure proper session cleanup is happening
-
-### Debug Mode
-
-Enable debug logging by setting the `DEBUG` environment variable:
-
-```bash
-export DEBUG=1
-python UI/app.py
-```
-
-This will provide detailed logging of agent interactions, tool calls, and session management.
 
 ## 📁 Project Structure
 
@@ -278,17 +132,3 @@ dungeon_master/
 ├── LICENSE                      # Project license
 └── README.md                    # This file
 ```
-
-**🏗️ Professional Architecture**: This clean structure demonstrates industry-standard Python packaging, clear separation of concerns, and maintainable code organization that recruiters will appreciate.
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🔒 Security Notes
-
-- **Never commit real Firebase credentials** to version control
-- The `config/service-account-key.json` file contains a template - replace with your actual credentials
-- **Never commit the .env file** to version control
-- Use `.env.template` as a starting point for your configuration
-- Ensure your `.gitignore` properly excludes sensitive files
-- Use environment variables for production deployments
