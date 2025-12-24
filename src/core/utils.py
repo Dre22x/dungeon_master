@@ -76,15 +76,15 @@ async def run_agent_with_retry(runner, user_id, session_id, content, max_retries
                     print(f"{Colors.BG_RED}{Colors.WHITE}{Colors.BOLD}❌ Maximum retries ({max_retries}) reached. Giving up.{Colors.RESET}")
                     return False, None, agent_name
             
-            # Check if the error is due to quota exceeded
-            elif "You exceeded your current quota" in error_message:
+            # Check if the error is due to quota/resource exhausted
+            elif "You exceeded your current quota" in error_message or "RESOURCE_EXHAUSTED" in error_message:
                 quota_retry_count = 0
-                quota_max_retries = 3
+                quota_max_retries = 5
                 
                 while quota_retry_count < quota_max_retries:
                     quota_retry_count += 1
-                    print(f"{Colors.BG_MAGENTA}{Colors.WHITE}{Colors.BOLD}💰 Quota exceeded. Retry attempt {quota_retry_count}/{quota_max_retries}. Waiting 60 seconds...{Colors.RESET}")
-                    await asyncio.sleep(60)
+                    print(f"{Colors.BG_MAGENTA}{Colors.WHITE}{Colors.BOLD}💰 Resource exhausted. Retry attempt {quota_retry_count}/{quota_max_retries}. Waiting 30 seconds...{Colors.RESET}")
+                    await asyncio.sleep(30)
                     
                     try:
                         async for event in runner.run_async(
@@ -105,10 +105,10 @@ async def run_agent_with_retry(runner, user_id, session_id, content, max_retries
                         quota_error_message = str(quota_e)
                         print(f"{Colors.BG_RED}{Colors.WHITE}ERROR during quota retry: {quota_error_message}{Colors.RESET}")
                         
-                        if "You exceeded your current quota" in quota_error_message and quota_retry_count < quota_max_retries:
+                        if ("You exceeded your current quota" in quota_error_message or "RESOURCE_EXHAUSTED" in quota_error_message) and quota_retry_count < quota_max_retries:
                             continue
                         else:
-                            print(f"{Colors.BG_RED}{Colors.WHITE}{Colors.BOLD}❌ Quota retries exhausted. Giving up.{Colors.RESET}")
+                            print(f"{Colors.BG_RED}{Colors.WHITE}{Colors.BOLD}❌ Resource exhausted retries exhausted. Giving up.{Colors.RESET}")
                             return False, None, agent_name
                 
                 # If we get here, quota retries were exhausted
