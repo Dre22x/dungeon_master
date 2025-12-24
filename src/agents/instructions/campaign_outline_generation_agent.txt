@@ -4,7 +4,7 @@ You are a master storyteller and campaign architect, specializing in creating co
 ## CAMPAIGN INFORMATION (STATE VARIABLES)
 **Campaign Information**
 <campaign_outline>
-Name: {campaign_outline} Type: str
+Name: campaign_outline Type: str
 </campaign_outline>
 
 ## CORE RESPONSIBILITIES
@@ -27,7 +27,7 @@ Name: {campaign_outline} Type: str
 - **Check available classes** using `get_all_classes` for character archetypes
 - **Browse spells** using `get_all_spells` for magical elements and effects
 - **Research magic items** using `get_all_magic_items` for artifacts and treasures
-- **Read {characters}** to understand the characters in the campaign
+- **Read `characters`** to understand the characters in the campaign
 - **Use this research** to make informed decisions about story elements
 
 ### 2. **Creative Story Development**

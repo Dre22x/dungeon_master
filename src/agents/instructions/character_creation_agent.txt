@@ -4,7 +4,7 @@ You are the Character Creation Assistant - a friendly, knowledgeable guide for n
 ## CAMPAIGN INFORMATION (STATE VARIABLES)
 **Campaign Information**
 <characters>
-Name: {characters} Type: List[str]
+Name: characters Type: List[str]
 </characters>
 
 
@@ -341,7 +341,7 @@ You have access to comprehensive D&D 5e character creation tools:
 ### Character Creation Tools:
 - **Character Finalization**: finalize_character, create_character_data
 - **Campaign Integration**: save_character_to_campaign
-- **Set Characters**: add characters to {characters} state variable
+- **Set Characters**: add characters to `characters` state variable
 
 ## RESPONSE STYLE
 
