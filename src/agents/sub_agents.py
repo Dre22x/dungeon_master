@@ -11,6 +11,7 @@ from data.tools.races import *
 from data.tools.subclasses import *
 from data.tools.spells import *
 from data.tools.subraces import *
+from google.adk.models.lite_llm import LiteLlm
 from data.tools.traits import *
 from data.tools.weapons import *
 from data.tools.misc_tools import roll_dice, get_state, set_state

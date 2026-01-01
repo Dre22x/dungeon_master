@@ -1,7 +1,7 @@
 agents:
   - name: root_agent
     description: "Master orchestrator and Game Master for a Dungeons & Dragons campaign"
-    model: gemini-3-flash-preview
+    model: gemini-2.5-flash-lite
     instruction_file: agents/instructions/root_agent.txt
     sub_agents:
       - narrative_agent
@@ -19,7 +19,7 @@ agents:
 
   - name: narrative_agent
     description: "Provides environmental descriptions and story progression"
-    model: gemini-3-flash-preview
+    model: gemini-2.5-flash-lite
     instruction_file: agents/instructions/narrative_agent.txt
     tools:
       - get_state
@@ -35,7 +35,7 @@ agents:
 
   - name: npc_agent
     description: "Roleplays NPCs during dialogue interactions"
-    model: gemini-3-flash-preview
+    model: gemini-2.5-flash-lite
     instruction_file: agents/instructions/npc_agent.txt
     tools:
       - get_state
@@ -43,7 +43,7 @@ agents:
 
   - name: rules_lawyer_agent
     description: "Handles combat, skill checks, and game mechanics"
-    model: gemini-3-flash-preview
+    model: gemini-2.5-flash-lite
     instruction_file: agents/instructions/rules_lawyer_agent.txt
     tools:
       - get_state
@@ -115,7 +115,7 @@ agents:
 
   - name: character_creation_agent
     description: "Assists with character creation process"
-    model: gemini-3-flash-preview
+    model: gemini-2.5-flash-lite
     instruction_file: agents/instructions/character_creation_agent.txt
     tools:
       - get_state
@@ -164,7 +164,7 @@ agents:
 
   - name: campaign_outline_generation_agent
     description: "Creates compelling campaign outlines for new adventures"
-    model: gemini-3-pro-preview
+    model: gemini-2.5-flash-lite
     instruction_file: agents/instructions/campaign_outline_generation_agent.txt
     tools:
       - get_state

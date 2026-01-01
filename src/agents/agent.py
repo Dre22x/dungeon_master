@@ -1,6 +1,7 @@
 from google.adk.agents import LlmAgent
 from .sub_agents import narrative_agent, npc_agent, rules_lawyer_agent, character_creation_agent, campaign_outline_generation_agent
 from .config_loader import get_model_for_agent
+from google.adk.models.lite_llm import LiteLlm
 import os
 import sys
 from data.tools.misc_tools import set_state, save_campaign, load_campaign, get_state

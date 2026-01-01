@@ -13,7 +13,6 @@ def load_agent_config() -> Dict[str, str]:
     Returns:
         Dict[str, str]: Dictionary mapping agent names to model names
     """
-    # Get the path to the adk.yaml file (should be in the project root)
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     yaml_path = os.path.join(project_root, 'config', 'adk.yaml')
     
@@ -21,7 +20,6 @@ def load_agent_config() -> Dict[str, str]:
         with open(yaml_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
         
-        # Extract agent configurations
         agent_configs = {}
         if 'agents' in config:
             for agent in config['agents']:

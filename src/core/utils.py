@@ -50,7 +50,6 @@ async def run_agent_with_retry(runner, user_id, session_id, content, max_retries
             async for event in runner.run_async(
                 user_id=user_id, session_id=session_id, new_message=content
             ):
-                # Capture the agent name from the event if available
                 if event.author:
                     agent_name = event.author
 
@@ -58,7 +57,6 @@ async def run_agent_with_retry(runner, user_id, session_id, content, max_retries
                 if response:
                     final_response_text = response
             
-            # If we get here, the call was successful
             return True, final_response_text, agent_name
             
         except Exception as e:
@@ -90,7 +88,6 @@ async def run_agent_with_retry(runner, user_id, session_id, content, max_retries
                         async for event in runner.run_async(
                             user_id=user_id, session_id=session_id, new_message=content
                         ):
-                            # Capture the agent name from the event if available
                             if event.author:
                                 agent_name = event.author
 
@@ -98,7 +95,6 @@ async def run_agent_with_retry(runner, user_id, session_id, content, max_retries
                             if response:
                                 final_response_text = response
                         
-                        # If we get here, the call was successful
                         return True, final_response_text, agent_name
                         
                     except Exception as quota_e:
