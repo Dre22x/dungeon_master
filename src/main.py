@@ -4,31 +4,32 @@ from agents.agent import root_agent
 from google.adk.runners import Runner
 import asyncio
 from core.utils import call_agent_async
-
+from data.tools.misc_tools import load_campaign, save_campaign, create_campaign
 from dotenv import load_dotenv
 load_dotenv()
 
 async def main_async():
   APP_NAME = "dungeon_master"
   USER_ID = "user_1"
-  SESSION_ID = str(uuid.uuid4())
-  print(f"Session ID: {SESSION_ID}")
+
+  answer = input("Do you want to start a new campaign? (y/n)")
+  if answer.lower() != "y":
+    campaign_id = input("Enter campaign ID: ")
+
+    # load initial state from db
+    try:
+      initial_state = load_campaign(campaign_id)
+    except:
+      print("Campaign not found")
+      return
+  else:
+    campaign_id = str(uuid.uuid4())
+    print(f"Starting new campaign with ID: {campaign_id}")
+    initial_state = create_campaign(campaign_id)
+
+  SESSION_ID = campaign_id
 
   session_service = InMemorySessionService()
-  initial_state = {
-      "campaign_id": SESSION_ID,
-      "game_state": "new_campaign",
-      "last_scene": "",
-      "last_action": "",
-      "campaign_outline": "",
-      "characters": [],
-      "npcs": [],
-      "combat_participants": dict(),
-      "combat_details": dict(),
-      "dialogue_participants": [],
-      "location": "",
-      "current_act": "",
-  }
 
   session = await session_service.create_session(
       app_name=APP_NAME,

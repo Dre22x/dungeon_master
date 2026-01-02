@@ -115,7 +115,7 @@ def get_state(state_name: str, tool_context: ToolContext) -> dict:
       return {'action': 'get_state', 'state_name': state_name, 'state_value': None, 'success': False}
 
 
-def create_campaign(campaign_id: str, tool_context: ToolContext) -> dict:
+def create_campaign(campaign_id: str) -> dict:
   """
   Creates a new entry for a campaign in the 'campaigns' collection in the database.
 
@@ -127,21 +127,17 @@ def create_campaign(campaign_id: str, tool_context: ToolContext) -> dict:
   if not db_:
       return {'action': 'create_campaign', 'created': False, 'message': "Error: Database client is not available."}
       
-  # Create the campaign collection and state document
+  # Create the campaign collection and relevant documents
   campaign_ref = db_.collection(campaign_id).document('state')
   
-  # Initialize with basic state variables
   initial_state = {
-      'created_date': firestore.SERVER_TIMESTAMP,
-      'game_state': '',
+      'campaign_id': campaign_id,
+      'game_state': 'new_campaign',
       'last_scene': '',
-      'campaign_outline': tool_context.state.get('campaign_outline', ''),
+      'campaign_outline': '',
       'last_action': '',
       'characters': [],
-      'npcs': [],
       'combat_participants': {},
-      'combat_details': {},
-      'dialogue_participants': [],
       'location': '',
       'current_act': ''
   }
@@ -149,21 +145,23 @@ def create_campaign(campaign_id: str, tool_context: ToolContext) -> dict:
   campaign_ref.set(initial_state)
       
   print(f"[DatabaseManager] Campaign '{campaign_id}' created successfully with state document.")
-  return {'action': 'create_campaign', 'created': True, 'message': f"Campaign '{campaign_id}' has been created successfully."}
-    
+  return initial_state
 
-def save_campaign(campaign_id: str, context: str, tool_context: ToolContext) -> dict:
+def save_campaign(tool_context: ToolContext) -> dict:
     """
-    Saves/updates a campaign to the campaign collection with state document.
+    Saves the current state variables to an existing campaign's state document.
+    This is the only save function that should be called by agents.
+
     Args:
         campaign_id: str - The ID of the campaign to save.
-        context: str - The context of the campaign. This is a freeform summary of the main events of the campaign so far.
+        tool_context: ToolContext - The tool context containing state variables.
 
     Returns:
-        dict - Action, updated, and message
+        dict - Action, saved, and message
     """
+    campaign_id = tool_context.state.get('campaign_id')
     if not db_:
-        return {'action': 'save_campaign', 'updated': False, 'message': "Error: Database client is not available."}
+        return {'action': 'save_campaign', 'saved': False, 'message': "Error: Database client is not available."}
 
     try:
         campaign_ref = db_.collection(campaign_id).document('state')
@@ -171,88 +169,39 @@ def save_campaign(campaign_id: str, context: str, tool_context: ToolContext) -> 
         # Check if campaign exists
         campaign_doc = campaign_ref.get()
         if not campaign_doc.exists:
-            # Create the campaign if it doesn't exist
-            initial_state = {
-                'created_date': firestore.SERVER_TIMESTAMP,
-                'game_state': '',
-                'last_scene': '',
-                'campaign_outline': tool_context.state.get('campaign_outline', ''),
-                'last_action': '',
-                'characters': [],
-                'npcs': [],
-                'combat_participants': {},
-                'combat_details': {},
-                'dialogue_participants': [],
-                'location': '',
-                'current_act': ''
-            }
-            campaign_ref.set(initial_state)
-            print(f"[DatabaseManager] Campaign '{campaign_id}' created successfully.")
+            return {'action': 'save_campaign', 'saved': False, 'message': f"Campaign '{campaign_id}' does not exist. Use create_campaign first."}
         
-        # Get all state variables individually
-        game_state = tool_context.state.get('game_state', '')
-        last_scene = tool_context.state.get('last_scene', '')
-        campaign_outline = tool_context.state.get('campaign_outline', '')
-        last_action = tool_context.state.get('last_action', '')
-        characters = tool_context.state.get('characters', [])
-        npcs = tool_context.state.get('npcs', [])
-        combat_participants = tool_context.state.get('combat_participants', {})
-        combat_details = tool_context.state.get('combat_details', {})
-        dialogue_participants = tool_context.state.get('dialogue_participants', [])
-        location = tool_context.state.get('location', '')
-        current_act = tool_context.state.get('current_act', '')
-        
-        # Prepare state variables document data
-        state_variables_data = {
+        # Get all state variables from tool_context
+        state_data = {
+            'campaign_id': campaign_id,
+            'game_state': tool_context.state.get('game_state', ''),
+            'last_scene': tool_context.state.get('last_scene', ''),
+            'campaign_outline': tool_context.state.get('campaign_outline', ''),
+            'last_action': tool_context.state.get('last_action', ''),
+            'characters': tool_context.state.get('characters', []),
+            'combat_participants': tool_context.state.get('combat_participants', {}),
+            'location': tool_context.state.get('location', ''),
+            'current_act': tool_context.state.get('current_act', ''),
             'last_saved': firestore.SERVER_TIMESTAMP,
-            'game_state': game_state,
-            'last_scene': last_scene,
-            'last_action': last_action,
-            'context': context,
-            'combat_participants': combat_participants,
-            'combat_details': combat_details,
-            'dialogue_participants': dialogue_participants,
-            'characters': characters,
-            'npcs': npcs,
-            'location': location,
-            'current_act': current_act
         }
-        
-        # Handle campaign outline
-        if isinstance(campaign_outline, str) and campaign_outline:
-            try:
-                import json
-                parsed_outline = json.loads(campaign_outline)
-                state_variables_data['campaign_outline'] = parsed_outline
-            except json.JSONDecodeError:
-                state_variables_data['campaign_outline'] = campaign_outline
-                print(f"[DatabaseManager] Warning: Campaign outline is not valid JSON for campaign '{campaign_id}'")
-        elif isinstance(campaign_outline, dict):
-            state_variables_data['campaign_outline'] = campaign_outline
-        elif campaign_outline:
-            state_variables_data['campaign_outline'] = campaign_outline
         
         # Update the state document
-        campaign_ref.update(state_variables_data)
+        campaign_ref.update(state_data)
         
-        print(f"[DatabaseManager] Campaign '{campaign_id}' updated successfully with state structure")
-        return {
-            'action': 'save_campaign', 
-            'updated': True, 
-            'message': f"Campaign '{campaign_id}' has been updated successfully with {len(context)} characters of context."
-        }
+        print(f"[DatabaseManager] Campaign '{campaign_id}' saved successfully.")
+        return {'action': 'save_campaign', 'saved': True, 'message': f"Campaign '{campaign_id}' has been saved successfully."}
 
     except Exception as e:
-        return {'action': 'save_campaign', 'updated': False, 'message': f"Error saving campaign '{campaign_id}': {e}"}
-
-def load_campaign(campaign_id: str, tool_context: ToolContext) -> dict:
+        return {'action': 'save_campaign', 'saved': False, 'message': f"Error saving campaign '{campaign_id}': {e}"}
+    
+def load_campaign(campaign_id: str) -> dict:
     """
-    Loads a campaign by its ID and restores all state variables to the shared state.
+    Loads a campaign by its ID and retrieves state variables.
     Args:
         campaign_id: str - The ID of the campaign to load.
 
     Returns:
-        dict - Action, loaded, and message
+        dict - State variables
     """
     if not db_:
         return {"error": "Database client is not available."}
@@ -264,94 +213,19 @@ def load_campaign(campaign_id: str, tool_context: ToolContext) -> dict:
         if campaign_doc.exists:
             campaign_data = campaign_doc.to_dict()
             
-            # Load all state variables into the shared state
-            tool_context.state['game_state'] = campaign_data.get('game_state', '')
-            tool_context.state['last_scene'] = campaign_data.get('last_scene', '')
-            tool_context.state['campaign_outline'] = campaign_data.get('campaign_outline', '')
-            tool_context.state['last_action'] = campaign_data.get('last_action', '')
-            tool_context.state['characters'] = campaign_data.get('characters', [])
-            tool_context.state['npcs'] = campaign_data.get('npcs', [])
-            tool_context.state['combat_participants'] = campaign_data.get('combat_participants', {})
-            tool_context.state['combat_details'] = campaign_data.get('combat_details', {})
-            tool_context.state['dialogue_participants'] = campaign_data.get('dialogue_participants', [])
-            tool_context.state['location'] = campaign_data.get('location', '')
-            tool_context.state['current_act'] = campaign_data.get('current_act', '')
+            state['campaign_id'] = campaign_data.get('campaign_id', campaign_id)
+            state['game_state'] = campaign_data.get('game_state', '')
+            state['last_scene'] = campaign_data.get('last_scene', '')
+            state['campaign_outline'] = campaign_data.get('campaign_outline', '')
+            state['last_action'] = campaign_data.get('last_action', '')
+            state['characters'] = campaign_data.get('characters', [])
+            state['combat_participants'] = campaign_data.get('combat_participants', {})
+            state['location'] = campaign_data.get('location', '')
+            state['current_act'] = campaign_data.get('current_act', '')
             
             print(f"[DatabaseManager] Campaign '{campaign_id}' loaded successfully with all state variables.")
-            return {'action': 'load_campaign', 'loaded': True, 'message': f"Campaign '{campaign_id}' loaded successfully with all state variables."}
+            return state
         else:
             return {"error": f"Campaign with ID '{campaign_id}' not found."}
     except Exception as e:
         return {"error": f"Error loading campaign '{campaign_id}': {e}"}
-    
-def fix_campaign_data_structure(campaign_id: str) -> dict:
-    """
-    Fixes the data structure of an existing campaign to use the new state format.
-    This function migrates data from the old structure to the new one.
-    
-    Args:
-        campaign_id: str - The ID of the campaign to fix.
-    
-    Returns:
-        dict - Action, fixed, and message
-    """
-    if not db_:
-        return {'action': 'fix_campaign_data_structure', 'fixed': False, 'message': "Error: Database client is not available."}
-
-    try:
-        # Check if old structure exists (campaigns collection)
-        old_campaign_ref = db_.collection('campaigns').document(campaign_id)
-        old_campaign_doc = old_campaign_ref.get()
-        
-        if not old_campaign_doc.exists:
-            return {'action': 'fix_campaign_data_structure', 'fixed': False, 'message': f"Campaign '{campaign_id}' not found in old structure."}
-        
-        old_campaign_data = old_campaign_doc.to_dict()
-        
-        # Create new structure
-        new_campaign_ref = db_.collection(campaign_id).document('state')
-        
-        # Prepare state data
-        state_variables_data = {
-            'created_date': old_campaign_data.get('created_date', firestore.SERVER_TIMESTAMP),
-            'last_saved': firestore.SERVER_TIMESTAMP,
-            'game_state': old_campaign_data.get('game_state', ''),
-            'last_scene': old_campaign_data.get('last_scene', ''),
-            'last_action': old_campaign_data.get('last_action', ''),
-            'context': old_campaign_data.get('context', ''),
-            'combat_participants': old_campaign_data.get('combat_participants', {}),
-            'combat_details': old_campaign_data.get('combat_details', {}),
-            'dialogue_participants': old_campaign_data.get('dialogue_participants', []),
-            'characters': old_campaign_data.get('characters', []),
-            'npcs': old_campaign_data.get('npcs', []),
-            'location': old_campaign_data.get('location', ''),
-            'current_act': old_campaign_data.get('current_act', '')
-        }
-        
-        # Handle campaign outline
-        campaign_outline = old_campaign_data.get('campaign_outline', '')
-        if isinstance(campaign_outline, str) and campaign_outline:
-            try:
-                import json
-                parsed_outline = json.loads(campaign_outline)
-                state_variables_data['campaign_outline'] = parsed_outline
-            except json.JSONDecodeError:
-                state_variables_data['campaign_outline'] = campaign_outline
-        elif isinstance(campaign_outline, dict):
-            state_variables_data['campaign_outline'] = campaign_outline
-        elif campaign_outline:
-            state_variables_data['campaign_outline'] = campaign_outline
-        
-        # Create the new state document
-        new_campaign_ref.set(state_variables_data)
-        
-        print(f"[DatabaseManager] Campaign '{campaign_id}' data structure migrated successfully")
-        return {
-            'action': 'fix_campaign_data_structure', 
-            'fixed': True, 
-            'message': f"Campaign '{campaign_id}' data structure has been migrated to new state format."
-        }
-
-    except Exception as e:
-        return {'action': 'fix_campaign_data_structure', 'fixed': False, 'message': f"Error fixing campaign '{campaign_id}': {e}"}
-    
