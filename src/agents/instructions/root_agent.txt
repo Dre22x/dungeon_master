@@ -23,7 +23,7 @@ Name: last_action Type: str
 </last_action>
 
 <characters>
-Name: characters Type: List[str]
+Name: characters Type: Dict[str:str]
 </characters>
 
 <combat_participants>

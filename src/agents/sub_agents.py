@@ -16,7 +16,6 @@ from data.tools.traits import *
 from data.tools.weapons import *
 from data.tools.misc_tools import roll_dice, get_state, set_state
 from data.tools.tools import get_starting_equipment
-from database.firestore.db_utils import *
 from .config_loader import get_model_for_agent
 import os
 import sys
@@ -41,14 +40,6 @@ narrative_agent = LlmAgent(
   description="You are the world's greatest storyteller, a master of prose and atmosphere. Your purpose is to paint a vivid picture of the world for the players, engaging all their senses. You are to be creative, evocative, and compelling. ",
   instruction=load_instructions("narrative_agent.txt"),
   tools=[get_state, set_state] 
-)
-
-npc_agent = LlmAgent(
-  name="npc_agent",
-  model=get_model_for_agent("npc_agent"),
-  description="You are a master method actor. Your sole purpose is to embody and roleplay as any Non-Player Character (NPC) in the game world. ",
-  instruction=load_instructions("npc_agent.txt"),
-    tools=[load_npc_from_campaign, save_npc_to_campaign]
 )
 
 rules_lawyer_agent = LlmAgent(
@@ -108,10 +99,6 @@ rules_lawyer_agent = LlmAgent(
            get_spells_by_level_and_school,
            get_spells_by_school,
            roll_dice,
-           load_character_from_campaign,
-           list_characters_in_campaign,
-           get_character_items,
-           get_character_spells,
            # Combat mechanics tools
            update_combat_participant_hp,
            end_combat,
@@ -173,9 +160,6 @@ character_creation_agent = LlmAgent(
            get_all_magic_items,
            get_all_magic_schools,
            finalize_character,
-           create_character_data,
-           save_character_to_campaign,
-           set_characters
           ]
 )
 

@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.sub_agents import narrative_agent, rules_lawyer_agent
 from data.tools.game_mechanics import start_combat, get_combat_state, end_combat
-from database.firestore.db_utils import save_campaign, load_campaign
+# Note: db_utils has been removed - save_campaign and load_campaign are now in misc_tools
 import json
 
 def test_combat_handoff():

@@ -68,7 +68,7 @@ def finalize_character(
     ability_scores: dict, 
     skills: list[str], 
     proficiencies: list[str],
-    equipment: list[str],
+    equipment: list[str], tool_context: ToolContext
     ) -> str:
     """
     Formats and prints a complete character sheet summary to the console. 
@@ -129,7 +129,21 @@ def finalize_character(
     final_sheet = "\n".join(sheet)
     print(final_sheet)
 
-    return f"Character sheet for {name} has been successfully generated and printed."
+    char_data = create_character_data(
+        name,
+        race,
+        char_class,
+        level,
+        background,
+        alignment,
+        ability_scores,
+        skills,
+        proficiencies,
+        equipment,
+    )
+
+    set_character(char_data, tool_context)
+    return {'action': 'create_character', 'character_data': char_data, 'success': True}
 
 def create_character_data(
     name: str, 
@@ -178,21 +192,19 @@ def create_character_data(
     return character_data
 
 
-def set_characters(characters: List[str], tool_context: ToolContext) -> dict:
+def set_character(character_data: dict, tool_context: ToolContext) -> dict:
     """
     Set characters to given value.
 
     Args:
-        characters: List[str] - The list of characters to set
+        character_data: dict - The character data to set
         tool_context: ToolContext - The tool context object
 
     Returns:
         dict - True if the characters were set successfully, False otherwise
     """
     try:
-      tool_context.state['characters'] = characters
-      print(f"Characters set to {characters}")
-      return {'action': 'set_characters', 'characters': characters, 'success': True}
+      tool_context.state['characters'][character_data['name']] = character_data
+      return {'action': 'set_character', 'character_data': character_data, 'success': True}
     except Exception as e:
-      print(f"Error setting characters: {e}")
-      return {'action': 'set_characters', 'characters': characters, 'success': False}
+      return {'action': 'set_character', 'character_data': character_data, 'success': False}

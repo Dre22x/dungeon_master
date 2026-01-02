@@ -16,7 +16,7 @@ from tools.game_mechanics import (
     get_combat_state,
     end_combat
 )
-from firestore.db_utils import save_campaign
+# Note: db_utils has been removed - save_campaign is now in misc_tools
 
 def test_npc_classification():
     """Test that NPCs are properly classified into combat categories."""

@@ -6,8 +6,7 @@ to the Firestore database. The outline includes the main quest, plot acts,
 key NPCs, and monsters for a cohesive campaign narrative.
 """
 
-from database.firestore.db_utils import *
-from google.cloud import firestore
+from .misc_tools import get_db_client
 import random
 
 def generate_campaign_outline(campaign_id: str, outline_data: dict) -> str:
@@ -32,7 +31,7 @@ def generate_campaign_outline(campaign_id: str, outline_data: dict) -> str:
     """
     try:
         # Get the database client
-        db = db_utils.get_db_client()
+        db = get_db_client()
         if not db:
             return "Error: Database client is not available."
         
@@ -68,7 +67,7 @@ def load_campaign_outline(campaign_id: str) -> dict:
     """
     try:
         # Get the database client
-        db = db_utils.get_db_client()
+        db = get_db_client()
         if not db:
             return {"error": "Database client is not available."}
         

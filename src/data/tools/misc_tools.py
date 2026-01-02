@@ -136,7 +136,7 @@ def create_campaign(campaign_id: str) -> dict:
       'last_scene': '',
       'campaign_outline': '',
       'last_action': '',
-      'characters': [],
+      'characters': {},
       'combat_participants': {},
       'location': '',
       'current_act': ''
@@ -178,7 +178,7 @@ def save_campaign(tool_context: ToolContext) -> dict:
             'last_scene': tool_context.state.get('last_scene', ''),
             'campaign_outline': tool_context.state.get('campaign_outline', ''),
             'last_action': tool_context.state.get('last_action', ''),
-            'characters': tool_context.state.get('characters', []),
+            'characters': tool_context.state.get('characters', {}),
             'combat_participants': tool_context.state.get('combat_participants', {}),
             'location': tool_context.state.get('location', ''),
             'current_act': tool_context.state.get('current_act', ''),
@@ -218,7 +218,7 @@ def load_campaign(campaign_id: str) -> dict:
             state['last_scene'] = campaign_data.get('last_scene', '')
             state['campaign_outline'] = campaign_data.get('campaign_outline', '')
             state['last_action'] = campaign_data.get('last_action', '')
-            state['characters'] = campaign_data.get('characters', [])
+            state['characters'] = campaign_data.get('characters', {})
             state['combat_participants'] = campaign_data.get('combat_participants', {})
             state['location'] = campaign_data.get('location', '')
             state['current_act'] = campaign_data.get('current_act', '')

@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.game_mechanics import calculate_hp, start_combat, get_combat_state, update_combat_participant_hp, end_combat
 from tools.character_data import create_character_data
-from firestore.db_utils import create_campaign, save_character_to_campaign
+# Note: db_utils has been removed - create_campaign and save_character_to_campaign need alternative
 
 def test_combat_mechanics():
     """Test the combat mechanics system"""

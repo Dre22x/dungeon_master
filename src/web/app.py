@@ -1,7 +1,6 @@
 from flask import Flask, render_template, jsonify
 import sys
 import os
-from ..database.firestore.db_utils import *
 from ..agents.agent import root_agent
 import datetime
 import json

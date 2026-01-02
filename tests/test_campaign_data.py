@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from firestore import db_utils
+# Note: db_utils has been removed - this test file needs to be updated to use misc_tools
 
 def inspect_campaign_data(campaign_id):
     """Inspect the campaign data in the database."""

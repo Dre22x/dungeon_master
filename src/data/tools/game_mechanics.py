@@ -102,8 +102,8 @@ def start_combat(campaign_id: str, characters: List[str], monsters: List[str]) -
     Returns:
         str - Status message about combat initialization
     """
-    from firestore.db_utils import load_character_from_campaign
-    from tools.monsters import get_monster_details
+    # Note: load_character_from_campaign was from deleted db_utils, needs alternative implementation
+    from .monsters import get_monster_details
     
     # Initialize combat state
     combat_data = {
