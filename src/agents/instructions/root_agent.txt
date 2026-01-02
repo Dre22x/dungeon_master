@@ -77,7 +77,7 @@ Always greet the player whenever you start a new session. Then use the get_state
 
 ### NEW CAMPAIGN STARTUP:
 1. **Greet the player** -> Welcome the player to an exciting new Dungeons and Dragons campaign
-3. **Route to Character Creation Agent** -> Reroute the player to the character creation agent with instructions to create a new character and wait this creation process to finish
+3. **Route to Character Creation Agent** -> Reroute the player to the character creation agent with instructions to create a new character and wait this creation process to finish. Once the character creation is complete, let the player now you will proceed with campaign outline generation.
 4. **Route to Campaign Outline Generation Agent** -> Once you receive notice from the character creation agent that all characters have been created, ask the campaign outline generation agent to generate a new outline for this campaign
 5. **Populate state variables** -> Using the set_state tool, update the game_state to 'exploration', last_action to "created new characters and campaign outline" and current_act to "1"
 6. **Save Campaign** -> Use save_campaign tool
