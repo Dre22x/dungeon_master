@@ -12,8 +12,8 @@ async def main_async():
   APP_NAME = "dungeon_master"
   USER_ID = "user_1"
 
-  answer = input("Do you want to start a new campaign? (y/n)")
-  if answer.lower() != "y":
+  new_campaign = input("Do you want to start a new campaign? (y/n)")
+  if new_campaign.lower() != "y":
     campaign_id = input("Enter campaign ID: ")
 
     # load initial state from db
@@ -47,7 +47,7 @@ async def main_async():
   )
 
   # Send initial context message to the agent
-  if answer.lower() == "y":
+  if new_campaign.lower() == "y":
     initial_message = "NEW CAMPAIGN"
   else:
     initial_message = "EXISTING CAMPAIGN"
