@@ -14,7 +14,7 @@ agents:
       - load_campaign
       - get_state
       - set_state
-      - set_characters
+      - set_character
 
   - name: narrative_agent
     description: "Provides environmental descriptions and story progression"
@@ -86,10 +86,6 @@ agents:
       - get_spells_by_level_and_school
       - get_spells_by_school
       - roll_dice
-      - load_character_from_campaign
-      - list_characters_in_campaign
-      - get_character_items
-      - get_character_spells
       - start_combat
       - get_combat_state
       - update_combat_participant_hp
@@ -109,8 +105,6 @@ agents:
     model: gemini-2.5-flash-lite
     instruction_file: agents/instructions/character_creation_agent.txt
     tools:
-      - get_state
-      - set_state
       - get_spell_details
       - get_all_spells
       - get_race_details
@@ -150,15 +144,12 @@ agents:
       - get_all_magic_items
       - get_all_magic_schools
       - finalize_character
-      - create_character_data
-      - save_character_to_campaign
 
   - name: campaign_outline_generation_agent
     description: "Creates compelling campaign outlines for new adventures"
     model: gemini-2.5-flash-lite
     instruction_file: agents/instructions/campaign_outline_generation_agent.txt
     tools:
-      - get_state
       - set_state
       - get_all_monsters
       - get_monster_details

@@ -4,7 +4,8 @@ from .config_loader import get_model_for_agent
 from google.adk.models.lite_llm import LiteLlm
 import os
 import sys
-from data.tools.misc_tools import set_state, save_campaign, get_state
+from data.tools.misc_tools import set_state, save_campaign, get_state, create_campaign, load_campaign
+from data.tools.character_data import set_character
 
 def load_instructions(filename: str) -> str:
     """
@@ -26,6 +27,6 @@ root_agent = LlmAgent(
   description="You are the master orchestrator and Game Master for a Dungeons & Dragons campaign. Your primary function is to manage the flow of the game and delegate tasks to your specialist agents. You do not interact with the player directly. ",
   instruction=load_instructions("root_agent.txt"),
   sub_agents=[narrative_agent, rules_lawyer_agent, character_creation_agent, campaign_outline_generation_agent],
-  tools=[set_state, save_campaign, get_state]
+  tools=[create_campaign, save_campaign, load_campaign, get_state, set_state, set_character]
 )
 

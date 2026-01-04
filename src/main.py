@@ -46,6 +46,14 @@ async def main_async():
       session_service=session_service
   )
 
+  # Send initial context message to the agent
+  if answer.lower() == "y":
+    initial_message = "NEW CAMPAIGN"
+  else:
+    initial_message = "EXISTING CAMPAIGN"
+  
+  await call_agent_async(runner, USER_ID, SESSION_ID, initial_message)
+
   while True:
     user_input = input("\n[Player]> ")
     await call_agent_async(runner, USER_ID, SESSION_ID, user_input)

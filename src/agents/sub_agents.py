@@ -39,9 +39,13 @@ narrative_agent = LlmAgent(
   model=get_model_for_agent("narrative_agent"),
   description="You are the world's greatest storyteller, a master of prose and atmosphere. Your purpose is to paint a vivid picture of the world for the players, engaging all their senses. You are to be creative, evocative, and compelling. ",
   instruction=load_instructions("narrative_agent.txt"),
-  tools=[get_state, set_state] 
+  tools=[get_state, set_state,
+           get_all_monsters, get_monster_details,
+           get_all_races, get_race_details,
+           get_all_magic_items, get_magic_item_details,
+           get_all_spells, get_spell_details] 
 )
-
+ 
 rules_lawyer_agent = LlmAgent(
   name="rules_lawyer_agent",
   model=get_model_for_agent("rules_lawyer_agent"),
@@ -100,6 +104,8 @@ rules_lawyer_agent = LlmAgent(
            get_spells_by_school,
            roll_dice,
            # Combat mechanics tools
+           start_combat,
+           get_combat_state,
            update_combat_participant_hp,
            end_combat,
            get_next_turn,
