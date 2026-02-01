@@ -43,7 +43,6 @@ Root Agent (Orchestrator)
 ├── Campaing Outline Generation Agent
 ├── Narrative Agent
 ├── Rules Lawyer Agent
-└── NPC Agent
 ```
 
 ### Key Components
@@ -53,7 +52,6 @@ Root Agent (Orchestrator)
 - **Campaing Outline Generation Agent**: Generates campaign outlines and story structure
 - **Narrative Agent**: Handles story elements and environmental descriptions
 - **Rules Lawyer Agent**: Manages combat mechanics and rules questions
-- **NPC Agent**: Handles NPC dialogue and roleplay
 
 
 ### Data Flow
@@ -77,58 +75,4 @@ agents:
   character_creation_agent:
     model: gemini-1.5-flash
   # ... other agents
-```
-
-## 📁 Project Structure
-
-```
-dungeon_master/
-├── src/                        # Main source code
-│   ├── agents/                 # AI agent system
-│   │   ├── agent.py           # Root agent implementation
-│   │   ├── sub_agents.py      # Specialized agent definitions
-│   │   ├── config_loader.py   # Agent configuration management
-│   │   └── instructions/      # Agent instruction files
-│   ├── core/                   # Core game logic
-│   │   ├── session_manager.py # Session state management
-│   │   └── utils.py           # Utility functions
-│   ├── data/                   # Game data and rules engine
-│   │   └── tools/             # Game mechanics and data
-│   │       ├── character_data.py # Character management
-│   │       ├── game_mechanics.py # Combat and game rules
-│   │       ├── campaign_outline.py # Story generation
-│   │       ├── races.py       # Race definitions
-│   │       ├── classes.py     # Class definitions
-│   │       ├── spells.py      # Spell system
-│   │       ├── equipment.py   # Equipment and items
-│   │       ├── monsters.py    # Monster data
-│   │       ├── magic_items.py # Magical items
-│   │       ├── weapons.py     # Weapon definitions
-│   │       ├── traits.py      # Character traits
-│   │       ├── subraces.py    # Subrace options
-│   │       ├── subclasses.py  # Subclass options
-│   │       └── rules.py       # Game rules engine
-│   ├── database/               # Database layer
-│   │   └── firestore/         # Firebase integration
-│   │       └── db_utils.py    # Database utility functions
-│   ├── web/                    # Web interface
-│   │   ├── app.py             # Flask application
-│   │   ├── index.html         # Main page template
-│   │   └── campaign.html      # Campaign interface template
-│   ├── main.py                 # Console application entry point
-│   └── start_app.py           # Web application startup
-├── config/                      # Configuration files
-│   ├── adk.yaml               # Agent configuration
-│   └── .env.template          # Environment variables template
-├── scripts/                     # Utility scripts
-│   └── quick_start.py         # Automated setup script
-├── tests/                       # Test suite
-├── docs/                        # Documentation
-├── examples/                    # Usage examples
-├── requirements.txt             # Python dependencies
-├── setup.py                     # Package configuration
-├── .gitignore                   # Git ignore rules
-├── .gitattributes              # Git attributes
-├── LICENSE                      # Project license
-└── README.md                    # This file
 ```
