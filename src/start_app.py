@@ -12,12 +12,10 @@ import threading
 import signal
 from pathlib import Path
 
-# Global variables to track processes
 flask_process = None
 adk_process = None
 
 def signal_handler(signum, frame):
-    """Handle Ctrl+C to gracefully shut down both processes."""
     print("\n🛑 Shutting down services...")
     if flask_process:
         flask_process.terminate()
@@ -26,7 +24,7 @@ def signal_handler(signum, frame):
         adk_process.terminate()
         print("✅ ADK web interface stopped")
     sys.exit(0)
-
+``
 def start_flask_app():
     """Start the Flask web application."""
     global flask_process
@@ -75,13 +73,11 @@ def main():
     print("🎲 AI Dungeon Master - Automated Startup")
     print("=" * 50)
     
-    # Check if we're in the right directory
     project_root = Path(__file__).parent.parent
     if not (project_root / "adk.yaml").exists():
         print("❌ Error: adk.yaml not found. Please run this script from the project root directory.")
         sys.exit(1)
     
-    # Check if ADK is installed (optional now)
     try:
         subprocess.run(["adk", "--version"], capture_output=True, check=True)
         print("✅ ADK is available (optional for development)")
@@ -94,11 +90,9 @@ def main():
     print("📋 Starting services...")
     print()
     
-    # Start Flask app in a separate thread
     flask_thread = threading.Thread(target=start_flask_app, daemon=True)
     flask_thread.start()
     
-    # Wait a moment for Flask to start
     time.sleep(2)
     
     print("🎉 All services started successfully!")
@@ -114,11 +108,9 @@ def main():
     print()
     
     try:
-        # Keep the main thread alive and monitor processes
         while True:
             time.sleep(1)
             
-            # Check if processes are still running
             if flask_process and flask_process.poll() is not None:
                 print("❌ Flask server stopped unexpectedly")
                 break

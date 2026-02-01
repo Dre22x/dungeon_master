@@ -59,7 +59,6 @@ async def main_async():
     await call_agent_async(runner, USER_ID, SESSION_ID, user_input)
 
 def main():
-    """Entry point for the application."""
     asyncio.run(main_async())
 
 
